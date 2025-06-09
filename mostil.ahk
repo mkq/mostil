@@ -3,32 +3,43 @@
 #Warn All, StdOut
 #SingleInstance force
 #include mostil.ahk.conf ;TODO #include %A_ScriptFullPath%.conf
+traySetIcon("shell32.dll", 251)
 setTitleMatchMode("RegEx")
 
 ; TODO
 ; - allow a screen to have a parent tile instead of fixed x, y, w, h ⇒ become a real tiling window manager
+; - allow screen to have an input key ("maximize" shortcut without moving the split to 0% or 100%)
+; - make screen and tile inputs optional, but check:
+;   * tiles: both or none must have a key
+;   * at least one of screen or tiles must have a key
+;   * a screen with no tile inputs (i.e. only for "maximized" use) should not require orientation, default split, snap and grid.
 ; - refactor main script into a function and make the config script the main script?
 ; - configurable size how many pixels or percent a window should extend past the split
 ; - configurable max. number of windows to activate when undoing FocusWindowCommand
+; - Add configurable command separator char? That would e.g. enable multiple focus commands even if a placeWindow input starts
+;   with a char equal to a tile.
 
-DEBUG := true
+DEBUG := true ; later overwritten with configured value
 
 ; ____________________________________ init GUI
 
 SHORT_PROGRAM_NAME := "Mostil"
 LONG_PROGRAM_NAME := SHORT_PROGRAM_NAME " - Mostly tiling window layout manager"
 config := Configuration(config)
+DEBUG := config.debug
 class MyGui {
 	__new(config) {
 		printDebug("init GUI")
-		this.main := g := Gui("+AlwaysOnTop +Theme +Resize", LONG_PROGRAM_NAME)
+		this.main := g := Gui("+Theme", LONG_PROGRAM_NAME)
+		;g.backColor := "81f131"
+		;winSetTransColor(g.backColor, g)
 		this.input := g.add("ComboBox", "w280 vCmd", [])
 		this.defaultInputs := []
 		this.okButton := g.add("Button", "Default w60 x+0", "OK")
 		this.cancelButton := g.add("Button", "w60 x+0", "Cancel")
 		this.status := g.add("StatusBar")
 
-		; initial position:
+		; initial position
 		g.show()
 		pos := getWindowPos(g.hwnd)
 		; center in 1st screen:
@@ -40,6 +51,7 @@ class MyGui {
 			s.x + s.w / 2 - pos.w / 2,
 			s.y + s.h / 2 - pos.h / 2, , ,
 			g)
+
 		g.hide()
 	}
 	getState() {	; save combobox edit position
@@ -64,6 +76,7 @@ ui.main.onEvent("Escape", (*) => cancel('escape'))
 ui.input.onEvent("Change", onValueChange)
 ui.okButton.onEvent("Click", (*) => submit())
 ui.cancelButton.onEvent("Click", (*) => cancel('Button'))
+ui.main.show() ; TODO delete line
 
 ; ____________________________________ init
 
@@ -219,6 +232,8 @@ class CommandParseResult {
 
 class Screen {
 	__new(config) {
+		this.ui := getProp(config, "ui", false)
+		this.preview := getProp(config, "preview", true)
 		this.x := requireInteger(config.x, "screen x")
 		this.y := requireInteger(config.y, "screen y")
 		this.w := requireInteger(config.w, "screen w")
@@ -241,9 +256,10 @@ class Screen {
 			throw ValueError("invalid negative value in screen config")
 		}
 
-		if (config.snap is Array && config.snap.length == 2
-			&& (this.minValue := parsePercentage(config.snap[1], maxSplitValue, "snap min")) >= 0
-			&& (this.maxValue := parsePercentage(config.snap[2], maxSplitValue, "snap max")) >= 0
+		snap := getProp(config, "snap", ["0%", "100%"])
+		if (snap is Array && snap.length == 2
+			&& (this.minValue := parsePercentage(snap[1], maxSplitValue, "snap min")) >= 0
+			&& (this.maxValue := parsePercentage(snap[2], maxSplitValue, "snap max")) >= 0
 			&& this.minValue + this.grid < this.maxValue) {
 			;
 		} else {
@@ -629,7 +645,8 @@ class CommentCommandParser extends CommandParser {
 
 class Configuration {
 	__new(rawConfig) {
-		this.closeOnFocusLost := rawConfig.closeOnFocusLost
+		this.debug := getProp(rawConfig, "debug", false)
+		this.closeOnFocusLost := getProp(rawConfig, "closeOnFocusLost", true)
 		this.hotkey := rawConfig.hotkey
 		this.screens := Configuration.parseScreensConfig_(rawConfig.screens)
 		this.commandParsers := Configuration.parseCommandsConfig_(rawConfig.commands)
@@ -669,6 +686,19 @@ class Configuration {
 				throw ValueError("duplicate screen input in " s.tiles[1].input s.tiles[2].input)
 			}
 			tileInputs.push(s.tiles[1].input, s.tiles[2].input)
+		}
+		if (screens.count == 0) {
+			throw ValueError("no screens configured")
+		}
+		hasUi := false
+		for name, s in screens {
+			if (s.ui) {
+				hasUi := true
+				break
+			}
+		}
+		if (!hasUi) {
+			throw ValueError("no configured screen has ui set to true")
 		}
 		return screens
 	}

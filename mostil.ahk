@@ -56,11 +56,10 @@ class MyGui {
 ui := MyGui()
 ui.initGuiPos(config)
 
-closeOnFocusLost := true
-if (!DEBUG) {
-	onMessage(0x6, ; WM_ACTIVATE
-		(wp, lp, msg, hwnd) => (closeOnFocusLost && hwnd == ui.main.hwnd && !wp) ? cancel('focus lost') : 1)
-}
+closeOnFocusLostAllowed := true
+onMessage(0x6, (wp, lp, msg, hwnd) => ; WM_ACTIVATE
+	(config.closeOnFocusLost && closeOnFocusLostAllowed && hwnd == ui.main.hwnd && !wp)
+		? cancel('focus lost') : 1)
 ui.main.onEvent("Close", (*) => cancel('window closed'))
 ui.main.onEvent("Escape", (*) => cancel('escape'))
 ui.input.onEvent("Change", onValueChange)
@@ -124,7 +123,7 @@ handleCommandChange(commandParseResults) {
 		return
 	}
 
-	global closeOnFocusLost := false
+	global closeOnFocusLostAllowed := false
 	try {
 		; undo pendingCommandParseResults which are not in commandParseResults:
 		loop pendingCommandParseResults.length - diffIndex + 1 {
@@ -141,7 +140,7 @@ handleCommandChange(commandParseResults) {
 			cpr.command.executePreview()
 		}
 	} finally {
-		closeOnFocusLost := true
+		closeOnFocusLostAllowed := true
 	}
 }
 
@@ -620,8 +619,8 @@ class CommentCommandParser extends CommandParser {
 
 class Configuration {
 	__new(rawConfig) {
+		this.closeOnFocusLost := rawConfig.closeOnFocusLost
 		this.hotkey := rawConfig.hotkey
-		this.focusKey := rawConfig.focusKey
 		this.screens := Configuration.parseScreensConfig_(rawConfig.screens)
 		this.commandParsers := Configuration.parseCommandsConfig_(rawConfig.commands)
 		printDebug("Configuration ctor end")

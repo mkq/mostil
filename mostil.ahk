@@ -19,18 +19,18 @@ SHORT_PROGRAM_NAME := "Mostil"
 LONG_PROGRAM_NAME := SHORT_PROGRAM_NAME " - Mostly tiling window layout manager"
 config := Configuration(config)
 class MyGui {
-	__new() {
+	__new(config) {
 		printDebug("init GUI")
-		this.main := Gui("+AlwaysOnTop +Theme +Resize", LONG_PROGRAM_NAME)
-		this.input := this.main.add("ComboBox", "w280 vCmd", [])
+		this.main := g := Gui("+AlwaysOnTop +Theme +Resize", LONG_PROGRAM_NAME)
+		this.input := g.add("ComboBox", "w280 vCmd", [])
 		this.defaultInputs := []
-		this.okButton := this.main.add("Button", "Default w60 x+0", "OK")
-		this.cancelButton := this.main.add("Button", "w60 x+0", "Cancel")
-		this.status := this.main.add("StatusBar")
-	}
-	initGuiPos(config) {
-		this.main.show()
-		pos := getWindowPos(this.main.hwnd)
+		this.okButton := g.add("Button", "Default w60 x+0", "OK")
+		this.cancelButton := g.add("Button", "w60 x+0", "Cancel")
+		this.status := g.add("StatusBar")
+
+		; initial position:
+		g.show()
+		pos := getWindowPos(g.hwnd)
 		; center in 1st screen:
 		for , sTmp in config.screens {
 			s := sTmp
@@ -39,8 +39,8 @@ class MyGui {
 		winMove(
 			s.x + s.w / 2 - pos.w / 2,
 			s.y + s.h / 2 - pos.h / 2, , ,
-			this.main)
-		this.main.hide()
+			g)
+		g.hide()
 	}
 	getState() {	; save combobox edit position
 		editSel := sendMessage(0x0140, , , this.input) ;CB_GETEDITSEL
@@ -53,8 +53,7 @@ class MyGui {
 		sendMessage(0x0142, , state.editSel, this.input) ;CB_SETEDITSEL
 	}
 }
-ui := MyGui()
-ui.initGuiPos(config)
+ui := MyGui(config)
 
 closeOnFocusLostAllowed := true
 onMessage(0x6, (wp, lp, msg, hwnd) => ; WM_ACTIVATE
@@ -361,8 +360,11 @@ class Tile {
 
 class PlaceWindowCommandParser extends CommandParser {
 	static parseConfig(config) {
-		cmd := config.hasProp("run") ? config.run : ""
-		return PlaceWindowCommandParser(config.input, config.name, config.criteria, cmd)
+		return PlaceWindowCommandParser(
+			config.input,
+			getProp(config, "name", ""),
+			getProp(config, "criteria"),
+			getProp(config, "run", ""))
 	}
 	__new(windowInput, name, criteria, launchCmdStr := "") {
 		this.windowInput := windowInput
@@ -418,23 +420,28 @@ class PlaceWindowCommand extends Command {
 	}
 
 	executePreview() {
-		this.windowId := winExist(this.windowSpec.criteria)
-		if (this.windowId) {
+		if (this.windowSpec.criteria) {
+			this.windowId := winExist(this.windowSpec.criteria)
+		} else { ; MRU mode
+			this.windowId := 0
+			for wid in getNormalWindowIds({ excludeId: ui.main.hwnd }) {
+				this.windowId := wid
+				break
+			}
+		}
+		if (this.windowId) { ; selected window exists
 			this.oldPosition := getWindowPos(this.windowId)
 			this.oldMinMax := winGetMinMax(this.windowId)
 			this.placeholderWindow := false
 
 			; determine windows with higher z-order than this.windowId
 			this.oldHighZWindowIds := []
-			for wid in winGetList() {
-				wid2 := wid ; workaround for Autohotkey bug? wid does not exist in the printDebugF closure, but wid2 does.
-				if (wid == this.windowId) {
-					break
-				}
-				title := winGetTitle(wid)
-				printDebugF('window before selected: {}`t({}, "{}")', () => [wid2, WinGetProcessName_(wid2), title])
-				if (wid !== ui.main.hwnd && title !== "") {
-					this.oldHighZWindowIds.insertAt(1, wid)
+			if (this.windowSpec.criteria) { ; not necessary in MRU mode
+				for wid in getNormalWindowIds({ stopAtId: this.windowId }) {
+					printDebug('window before selected: {}', wid)
+					if (wid !== ui.main.hwnd) {
+						this.oldHighZWindowIds.insertAt(1, wid)
+					}
 				}
 			}
 
@@ -442,6 +449,9 @@ class PlaceWindowCommand extends Command {
 			this.moveTargetWindowToSelectedTile_(this.windowId)
 		} else { ; selected window does not exist
 			if (!this.selectedTile) { ; no tile, i.e. focus-only mode, but selected window does not exist: do nothing
+				return
+			}
+			if (!this.windowSpec.launchCommand) {
 				return
 			}
 			; init placeholder GUI
@@ -689,6 +699,10 @@ eq(a, b) {
 	return a == false ? b == false : a == b
 }
 
+getProp(o, propName, defaultValue := false) {
+	return o.hasProp(propName) ? o.%propName% : defaultValue
+}
+
 join(sep, a) {
 	start := true
 	result := ""
@@ -855,7 +869,29 @@ winSetMinMax(windowId, value) {
 	}
 }
 
-WinGetProcessName_(wid) {
-	printDebug("WinGetProcessName({})", wid)
-	return WinGetProcessName(wid)
+getNormalWindowIds(options := {}) {
+	printDebug('my window id: {}', ui.main.hwnd)
+	results := []
+	excludeId := getProp(options, "excludeId", 0)
+	stopAtId := getProp(options, "stopAtId", 0)
+	for wid_ in winGetList() {
+		wid := wid_ ; workaround for Autohotkey bug? Loop variable does not exist in the printDebugF closure, but this copy does.
+		title := winGetTitle(wid)
+		if (wid == excludeId) {
+			printDebug('winGetList(): excludeId found')
+			include := false
+		} else {
+			include := title !== '' ; TODO: better criterium to exclude non-window results like Shell_TrayWnd?
+		}
+		printDebugF('winGetList(): id: {}, processName: {}, class: {}, title: {}, include: {}', () =>
+			[wid, winGetProcessName(wid), winGetClass(wid), title, include])
+		if (include) {
+			results.push(wid)
+		}
+		if (wid == stopAtId) {
+			printDebug('winGetList(): stopAtId found')
+			break
+		}
+	}
+	return results
 }

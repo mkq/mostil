@@ -394,13 +394,16 @@ class Tile {
 
 class PlaceWindowCommandParser extends CommandParser {
 	static parseConfig(config) {
-		return PlaceWindowCommandParser(
-			config.input,
-			getProp(config, "name", ""),
-			getProp(config, "criteria"),
-			getProp(config, "run", ""))
+		command := getProp(config, "run", "")
+		previewIcon := getProp(config, "previewIcon", false)
+		if (previewIcon) { ; parse previewIcon (format "[index]file" or just "file")
+			previewIcon := regExMatch(previewIcon, '^\[(\d+)\](.+)', &match) ? { index: match[1], file: match[2] } : { index: 1, file: previewIcon }
+		} else { ; default previewIcon: 1st word of command
+			previewIcon := { index: 1, file: regExReplace(command, '\s.*', '') }
+		}
+		return PlaceWindowCommandParser(config.input, getProp(config, "name", ""), getProp(config, "criteria"), previewIcon, command)
 	}
-	__new(windowInput, name, criteria, launchCmdStr := "") {
+	__new(windowInput, name, criteria, previewIcon, launchCmdStr := "") {
 		this.windowInput := windowInput
 		this.name := name
 		this.criteria := criteria

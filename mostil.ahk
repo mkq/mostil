@@ -7,130 +7,88 @@ traySetIcon("shell32.dll", 251)
 setTitleMatchMode("RegEx")
 
 ; TODO
-; - allow a screen to have a parent tile instead of fixed x, y, w, h ⇒ become a real tiling window manager
+; - allow nesting like a real tiling window manager (a screen can have a parent tile instead of fixed x, y, w, h)
 ; - allow screen to have an input key ("maximize" shortcut without moving the split to 0% or 100%)
-; - make screen and tile inputs optional, but check:
-;   * tiles: both or none must have a key
-;   * at least one of screen or tiles must have a key
-;   * a screen with no tile inputs (i.e. only for "maximized" use) should not require orientation, default split, snap and grid.
+; - for maximizing only: allow a screen without tiles, but with an input key
 ; - refactor main script into a function and make the config script the main script?
-; - configurable size how many pixels or percent a window should extend past the split
+; - configurable size how many pixels or percent a window should overlap the split
 ; - configurable max. number of windows to activate when undoing FocusWindowCommand
 ; - Add configurable command separator char? That would e.g. enable multiple focus commands even if a placeWindow input starts
 ;   with a char equal to a tile.
+; - ScreenGuiManager: add scaling option (as percent of its screen)
+; - If any own window is activated, activate the one with input instead.
 
 DEBUG := true ; later overwritten with configured value
 
-; ____________________________________ init GUI
-
+; ____________________________________ init
 SHORT_PROGRAM_NAME := "Mostil"
 LONG_PROGRAM_NAME := SHORT_PROGRAM_NAME " - Mostly tiling window layout manager"
-config := Configuration(config)
-DEBUG := config.debug
-class MyGui {
-	__new(config) {
-		printDebug("init GUI")
-		this.main := g := Gui("+Theme", LONG_PROGRAM_NAME)
-		;g.backColor := "81f131"
-		;winSetTransColor(g.backColor, g)
-		this.input := g.add("ComboBox", "w280 vCmd", [])
-		this.defaultInputs := []
-		this.okButton := g.add("Button", "Default w60 x+0", "OK")
-		this.cancelButton := g.add("Button", "w60 x+0", "Cancel")
-		this.status := g.add("StatusBar")
+g := {} ; instead of most global variables
 
-		; initial position
-		g.show()
-		pos := getWindowPos(g.hwnd)
-		; center in 1st screen:
-		for , sTmp in config.screens {
-			s := sTmp
-			break
-		}
-		winMove(
-			s.x + s.w / 2 - pos.w / 2,
-			s.y + s.h / 2 - pos.h / 2, , ,
-			g)
+init() {
+	printDebug("init")
+	c := Configuration(config)
+	g.commandParsers := c.commandParsers
+	g.guiManager := c.guiManager
+	g.closeOnFocusLostAllowed := true
+	DEBUG := c.debug
+	onMessage(0x6, (wp, lp, msg, hwnd) => ; WM_ACTIVATE
+		(c.closeOnFocusLost && g.closeOnFocusLostAllowed && !wp && g.guiManager.containsWindowId(hwnd))
+			? cancel('focus lost') : 1)
 
-		g.hide()
-	}
-	getState() {	; save combobox edit position
-		editSel := sendMessage(0x0140, , , this.input) ;CB_GETEDITSEL
-		printDebugF("sendMessage CB_GETEDITSEL result: {} ({}, {})", () => [editSel, editSel & 0xFFFF, editSel >> 16])
-		return { editSel: editSel }
-	}
-	restoreState(state) {
-		winWaitActive(this.main.hwnd, , 3)
-		; restore combobox edit position
-		sendMessage(0x0142, , state.editSel, this.input) ;CB_SETEDITSEL
-	}
+	hotkey(c.hotkey, hk => g.guiManager.show())
+	g.pendingCommandParseResults := []
+	g.submittable := true
 }
-ui := MyGui(config)
-
-closeOnFocusLostAllowed := true
-onMessage(0x6, (wp, lp, msg, hwnd) => ; WM_ACTIVATE
-	(config.closeOnFocusLost && closeOnFocusLostAllowed && hwnd == ui.main.hwnd && !wp)
-		? cancel('focus lost') : 1)
-ui.main.onEvent("Close", (*) => cancel('window closed'))
-ui.main.onEvent("Escape", (*) => cancel('escape'))
-ui.input.onEvent("Change", onValueChange)
-ui.okButton.onEvent("Click", (*) => submit())
-ui.cancelButton.onEvent("Click", (*) => cancel('Button'))
-ui.main.show() ; TODO delete line
-
-; ____________________________________ init
-
-printDebug("init")
-hotkey(config.hotkey, hk => ui.main.show())
-pendingCommandParseResults := []
-submittable := true
+init()
 
 ; ____________________________________ core logic
 
 submit() {
 	printDebug("submit")
-	if (!submittable) {
+	if (!g.submittable) {
 		return
 	}
-	ui.main.hide()
+	g.guiManager.hide()
 
-	while pendingCommandParseResults.length > 0 {
-		cpr := pendingCommandParseResults.removeAt(1)
+	while g.pendingCommandParseResults.length > 0 {
+		cpr := g.pendingCommandParseResults.removeAt(1)
 		printDebug("submit {}", cpr)
 		cpr.command.submit()
 	}
 
-	cmdStr := normalizeCommandString(ui.input.value)
-	ui.defaultInputs := moveToOrInsertAt0(ui.defaultInputs, cmdStr)
-	ui.input.delete()
-	ui.input.add(ui.defaultInputs)
+	input := g.guiManager.inputSGM.input
+	cmdStr := normalizeCommandString(input.value)
+	g.defaultInputs := moveToOrInsertAt0(g.defaultInputs, cmdStr)
+	input.delete()
+	input.add(g.defaultInputs)
 }
 
 cancel(reasonMessage) {
 	printDebug("cancel({})", reasonMessage)
-	while pendingCommandParseResults.length > 0 {
-		cpr := pendingCommandParseResults.removeAt(-1)
+	while g.pendingCommandParseResults.length > 0 {
+		cpr := g.pendingCommandParseResults.removeAt(-1)
 		printDebug("undo {}", cpr)
 		cpr.command.undo()
 	}
-	ui.input.value := ""
-	ui.main.hide()
+	g.guiManager.inputSGM.input.value := ""
+	g.guiManager.hide()
 }
 
 onValueChange(srcControl, *) {
-	cmdStr := ui.input.text
+	cmdStr := g.guiManager.inputSGM.input.text
 	printDebug('__________ onValueChange("{}") __________', cmdStr)
 	newCommandPRs := parseCommands(cmdStr)
 	try {
 		handleCommandChange(newCommandPRs)
 	} finally {
-		global pendingCommandParseResults := newCommandPRs
+		g.pendingCommandParseResults := newCommandPRs
 	}
 }
 
 handleCommandChange(commandParseResults) {
 	printDebug("handleCommandChange")
-	diffIndex := findDiffIndex(pendingCommandParseResults, commandParseResults, (a, b) => a.input == b.input)
+	diffIndex := findDiffIndex(g.pendingCommandParseResults, commandParseResults, (a, b) => a.input == b.input)
 	if (diffIndex == 0) {
 		return
 	}
@@ -138,8 +96,8 @@ handleCommandChange(commandParseResults) {
 	global closeOnFocusLostAllowed := false
 	try {
 		; undo pendingCommandParseResults which are not in commandParseResults:
-		loop pendingCommandParseResults.length - diffIndex + 1 {
-			cpr := pendingCommandParseResults.removeAt(-1)
+		loop g.pendingCommandParseResults.length - diffIndex + 1 {
+			cpr := g.pendingCommandParseResults.removeAt(-1)
 			printDebug("undo {}", cpr)
 			cpr.command.undo()
 		}
@@ -158,13 +116,13 @@ handleCommandChange(commandParseResults) {
 
 parseCommands(cmdStr) {
 	global submittable := true
-	ui.status.setText("")
+	g.guiManager.inputSGM.status.setText("")
 	cprs := []
 	i := 1, len := strlen(cmdStr)
 	while (i <= len) {
 		prevLength := cprs.length
 		prevI := i
-		for (p in config.commandParsers) {
+		for (p in g.commandParsers) {
 			if (p.parse(cmdStr, &i, cprs)) { ; p parsed something at i; continue with 1st parser at (already incremented) index
 				printDebug("parsed `"{}`" (next index {} → {}) into {} commands. ⇒ All commands:",
 					cmdStr, prevI, i, cprs.length - prevLength)
@@ -174,7 +132,7 @@ parseCommands(cmdStr) {
 		}
 		if (prevLength == cprs.length) {
 			global submittable := false
-			ui.status.setText(format("Invalid or incomplete input starting at index {}: {}", prevI - 1, substr(cmdStr, i)))
+			g.guiManager.inputSGM.status.setText(format("Invalid or incomplete input starting at index {}: {}", prevI - 1, substr(cmdStr, i)))
 			break
 		}
 	}
@@ -230,10 +188,70 @@ class CommandParseResult {
 	}
 }
 
+; handles all GUIs (ScreenGuiManagers)
+class GuiManager {
+	__new() {
+		this.screenGuiManagers := []
+		this.inputSGM := false
+	}
+
+	show() {
+		this.forEach(sgm => sgm.gui.show())
+	}
+
+	hide() {
+		this.forEach(sgm => sgm.gui.hide())
+	}
+
+	forEach(f) {
+		for sgm in this.screenGuiManagers {
+			if (sgm !== this.inputSGM) {
+				f(sgm)
+			}
+		}
+		f(this.inputSGM)
+	}
+
+	containsWindowId(windowId) {
+		for sgm in this.screenGuiManagers {
+			if (sgm.gui.hwnd == windowId) {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+; handles the GUI for a single screen
+class ScreenGuiManager {
+	__new(config, screen) {
+		printDebug("init GUI for {}", screen)
+		this.screen := screen
+		this.gui := Gui("+Theme", format('{} - screen "{}"', LONG_PROGRAM_NAME, screen.name))
+		;this.gui.backColor := "81f131"
+		;winSetTransColor(this.gui.backColor, this.gui)
+		this.input := false
+		if (getProp(config, 'input', false)) {
+			this.input := this.gui.add("ComboBox", "w280 vCmd", [])
+			this.input.onEvent("Change", onValueChange)
+			this.okButton := this.gui.add("Button", "Default w60 x+0", "OK")
+			this.cancelButton := this.gui.add("Button", "w60 x+0", "Cancel")
+			this.status := this.gui.add("StatusBar")
+			this.okButton.onEvent("Click", (*) => submit())
+			this.cancelButton.onEvent("Click", (*) => cancel('Button'))
+		}
+
+		this.gui.onEvent("Close", (*) => cancel('window closed'))
+		this.gui.onEvent("Escape", (*) => cancel('escape'))
+		this.gui.show()
+		winMove(config.x, config.y, screen.w, screen.h, this.gui)
+		this.gui.hide()
+	}
+}
+
 class Screen {
-	__new(config) {
-		this.ui := getProp(config, "ui", false)
-		this.preview := getProp(config, "preview", true)
+	__new(name, config) {
+		this.name := name
 		this.x := requireInteger(config.x, "screen x")
 		this.y := requireInteger(config.y, "screen y")
 		this.w := requireInteger(config.w, "screen w")
@@ -267,7 +285,7 @@ class Screen {
 		}
 
 		if (type(config.inputs) == "Array" && config.inputs.length == 2
-		&& type(config.inputs[1]) == "String" && type(config.inputs[2]) == "String") {
+			&& type(config.inputs[1]) == "String" && type(config.inputs[2]) == "String") {
 			t1input := config.inputs[1]
 			t2input := config.inputs[2]
 			if (t1input == t2input) {
@@ -281,7 +299,7 @@ class Screen {
 	}
 
 	toString() {
-		return format("{}({}, {}, {}x{})", type(this), this.x, this.y, this.w, this.h)
+		return format('{}("{}", {}, {}, {}x{})', type(this), this.name, this.x, this.y, this.w, this.h)
 	}
 
 	getTileForInput(inputChar) {
@@ -321,7 +339,7 @@ class Screen {
 	moveSplit(tileIndex := 0) {
 		this.splitValue := tileIndex == 1 ? max(this.splitValue - this.grid, this.minValue) :
 			tileIndex == 2 ? min(this.splitValue + this.grid, this.maxValue) :
-				this.defaultSplitValue
+			this.defaultSplitValue
 		tilePositions := this.computeTilePositions_()
 		this.tiles[1].setPosition(tilePositions[1])
 		this.tiles[2].setPosition(tilePositions[2])
@@ -403,12 +421,12 @@ class PlaceWindowCommandParser extends CommandParser {
 		; inputs & detect replacement with them? E.g. with a window called "e" and a tile "t" and command "e"
 		; having the same index in pendingCommandParseResults as "et" in commands, we know that the former became the
 		; latter and should be replaced.
-		if (t && pendingCommandParseResults.length > 0) {
-			replacedCommandParseResult := pendingCommandParseResults[-1]
+		if (t && g.pendingCommandParseResults.length > 0) {
+			replacedCommandParseResult := g.pendingCommandParseResults[-1]
 			if (replacedCommandParseResult.command is PlaceWindowCommand
 				&& replacedCommandParseResult.command.windowSpec.name == this.name) {
 				printDebug('replacing command "{}"', replacedCommandParseResult.input)
-				pendingCommandParseResults.removeAt(-1)
+				g.pendingCommandParseResults.removeAt(-1)
 			}
 		}
 		commandParseResults.push(CommandParseResult(this.windowInput . tileInput, cmd))
@@ -417,131 +435,81 @@ class PlaceWindowCommandParser extends CommandParser {
 }
 
 class PlaceWindowCommand extends Command {
-	__new(selectedTile, name, criteria, launchCmdStr := "") {
-		this.selectedTile := selectedTile
+	__new(selectedTileInfo, name, criteria, launchCmdStr := "") {
+		this.selectedTileInfo := selectedTileInfo
 		this.windowSpec := {
 			name: name,
 			criteria: criteria,
 			launchCommand: launchCmdStr
 		}
 		this.windowId := 0
-		this.oldMinMax := 0
-		this.oldPosition := false
-		this.oldHighZWindowIds := []
-		this.placeholderWindow := false
+		this.launchPending := false
+		this.oldTileText := selectedTileInfo.guiManager.getText()
+		this.oldTileIcon := selectedTileInfo.guiManager.getIcon()
 	}
 
 	toString() {
-		return format("{}({}, {})", type(this), this.windowSpec.name, String(this.selectedTile))
+		return format("{}({}, {})", type(this), this.windowSpec.name, String(this.selectedTileInfo.tile))
 	}
 
 	executePreview() {
 		if (this.windowSpec.criteria) {
 			this.windowId := winExist(this.windowSpec.criteria)
 		} else { ; MRU mode
+			myWindowIds := arrayMap(g.guiManager.screenGuiManagers, gm => gm.gui.hwnd)
 			this.windowId := 0
-			for wid in getNormalWindowIds({ excludeId: ui.main.hwnd }) {
-				this.windowId := wid
-				break
-			}
-		}
-		if (this.windowId) { ; selected window exists
-			this.oldPosition := getWindowPos(this.windowId)
-			this.oldMinMax := winGetMinMax(this.windowId)
-			this.placeholderWindow := false
-
-			; determine windows with higher z-order than this.windowId
-			this.oldHighZWindowIds := []
-			if (this.windowSpec.criteria) { ; not necessary in MRU mode
-				for wid in getNormalWindowIds({ stopAtId: this.windowId }) {
-					printDebug('window before selected: {}', wid)
-					if (wid !== ui.main.hwnd) {
-						this.oldHighZWindowIds.insertAt(1, wid)
-					}
+			for wid in getNormalWindowIds() {
+				if (arrayIndexOf(myWindowIds, wid) > 0) {
+					this.windowId := wid
+					break
 				}
 			}
+		}
 
-			; focus and move selected window, then back to our window
-			this.moveTargetWindowToSelectedTile_(this.windowId)
-		} else { ; selected window does not exist
-			if (!this.selectedTile) { ; no tile, i.e. focus-only mode, but selected window does not exist: do nothing
+		this.launchPending := !this.windowId
+		if (this.launchPending) { ; selected window does not exist
+			if (!this.selectedTileInfo) { ; no tile, i.e. focus-only mode, but selected window does not exist: do nothing
 				return
 			}
 			if (!this.windowSpec.launchCommand) {
 				return
 			}
-			; init placeholder GUI
-			this.placeholderWindow := Gui("+Theme +Resize",
-				format("{} - {} (pending launch)", SHORT_PROGRAM_NAME, this.windowSpec.name))
-			this.placeholderWindow.setFont("S14")
-			this.placeholderWindow.addText("x10", "about to launch ")
-			this.placeholderWindow.setFont("W700")
-			this.placeholderWindow.addText("x+0", this.windowSpec.name)
-			this.placeholderWindow.setFont("W400")
-			this.placeholderWindow.addText("x+0", ":")
-			this.placeholderWindow.addText("x10 y+4", this.windowSpec.launchCommand)
-
-			this.moveTargetWindowToSelectedTile_(this.placeholderWindow.hwnd, () => this.placeholderWindow.show())
-			; TODO? winMoveBottom(this.placeholderWindow.hwnd)
-		}
-	}
-
-	moveTargetWindowToSelectedTile_(targetWindowId, beforeAction := () => {}) {
-		printDebug('moveTargetWindow_({}, …)', targetWindowId)
-		this.uiState := ui.getState()
-		try {
-			beforeAction()
-			winActivate(targetWindowId)
-			if (this.selectedTile) {
-				this.selectedTile.grabWindow(targetWindowId)
-			}
-		} finally {
-			winActivate(ui.main.hwnd) ; back to our window
-			ui.restoreState(this.uiState)
+			this.selectedTileInfo.guiManager.setText(this.windowSpec.launchCommand " (pending launch)")
+			this.selectedTileInfo.guiManager.setIcon(getIconForCommand(this.windowSpec.launchCommand))
+		} else {
+			this.selectedTileInfo.guiManager.setIcon(getWindowIcon(this.windowId))
 		}
 	}
 
 	submit() {
-		if (this.placeholderWindow) {
+		if (this.launchPending) {
+			this.launchPending := false
+			this.selectedTileInfo.guiManager.setText(this.oldTileText)
+			this.selectedTileInfo.guiManager.setIcon(this.oldTileIcon)
+
 			printDebug('run: {}', this.windowSpec.launchCommand)
 			run(this.windowSpec.launchCommand)
 			printDebug('waiting for window {}', this.windowSpec.criteria)
 			this.windowId := winWait(this.windowSpec.criteria, , 20)
 			printDebug('winWait returned {}', this.windowId)
-			try {
-				if (this.windowId) {
-					this.selectedTile.grabWindow(this.windowId)
-				} else {
-					statusBar := this.placeholderWindow.addStatusBar()
-					statusBar.setText(format('WARN: running {} did not yield a window matching {}',
-						this.windowSpec.launchCommand, this.windowSpec.criteria))
-					sleep(2000)
-				}
-			} finally {
-				this.placeholderWindow.destroy()
-				this.placeholderWindow := false
-				this.oldPosition := false
+
+			if (!this.windowId) {
+				g.guiManager.gui.status.setText(format('WARN: running {} did not yield a window matching {}',
+					this.windowSpec.launchCommand, this.windowSpec.criteria))
+				return
 			}
+		}
+
+		winActivate(this.windowId)
+		if (this.selectedTileInfo) {
+			this.selectedTileInfo.tile.grabWindow(this.windowId)
 		}
 	}
 
 	undo() {
-		if (this.placeholderWindow) {
-			this.placeholderWindow.destroy()
-			this.placeholderWindow := false
-			return
-		}
-		if (this.windowId) {
-			moveWindowToPos(this.windowId, this.oldPosition)
-			winSetMinMax(this.windowId, this.oldMinMax)
-			for wid in this.oldHighZWindowIds {
-				printDebug("restore z-order: {}", wid)
-				winActivate(wid)
-			}
-			this.oldHighZWindowIds := []
-			this.windowId := false
-			ui.restoreState(this.uiState)
-		}
+		this.launchPending := false
+		this.selectedTileInfo.guiManager.setText(this.oldTileText)
+		this.selectedTileInfo.guiManager.setIcon(this.oldTileIcon)
 	}
 }
 
@@ -598,9 +566,7 @@ class ResizeSplitCommand extends Command {
 		if (this.selectedTile is Tile) {
 			this.selectedTile.moveSplit()
 		} else {
-			for (, s in config.screens) {
-				s.resetSplit()
-			}
+			g.guiManager.forEachScreen(s => s.resetSplit())
 		}
 		; TODO resize all windows in the tile and its sibling tile
 		return this
@@ -648,7 +614,8 @@ class Configuration {
 		this.debug := getProp(rawConfig, "debug", false)
 		this.closeOnFocusLost := getProp(rawConfig, "closeOnFocusLost", true)
 		this.hotkey := rawConfig.hotkey
-		this.screens := Configuration.parseScreensConfig_(rawConfig.screens)
+		this.guiManager := GuiManager()
+		this.parseScreensConfig_(getMandatoryProp(rawConfig, 'screens', 'no screens configured'))
 		this.commandParsers := Configuration.parseCommandsConfig_(rawConfig.commands)
 		printDebug("Configuration ctor end")
 	}
@@ -676,31 +643,36 @@ class Configuration {
 		return parsers
 	}
 
-	static parseScreensConfig_(rawConfigs) {
-		screens := Map()
+	parseScreensConfig_(rawConfigs) {
+		screens := []
 		tileInputs := []
 		for name, rawConfig in rawConfigs.ownProps() {
-			s := Screen(rawConfig)
-			screens.set(name, s)
+			s := Screen(name, rawConfig)
+			screens.push(s)
 			if (arrayIndexOf(tileInputs, s.tiles[1].input) > 0 || arrayIndexOf(tileInputs, s.tiles[2].input) > 0) {
 				throw ValueError("duplicate screen input in " s.tiles[1].input s.tiles[2].input)
 			}
 			tileInputs.push(s.tiles[1].input, s.tiles[2].input)
-		}
-		if (screens.count == 0) {
-			throw ValueError("no screens configured")
-		}
-		hasUi := false
-		for name, s in screens {
-			if (s.ui) {
-				hasUi := true
-				break
+
+			uiRawConfig := getProp(rawConfig, "ui", { x: s.x, y: s.y, scale: "100%" })
+			sgm := ScreenGuiManager(uiRawConfig, s)
+			this.guiManager.screenGuiManagers.push(sgm)
+			if (sgm.input) {
+				if (this.guiManager.inputSGM) {
+					throw ValueError("multiple GUIs with input: true")
+				} else {
+					this.guiManager.inputSGM := sgm
+				}
 			}
 		}
-		if (!hasUi) {
-			throw ValueError("no configured screen has ui set to true")
+		if (screens.length == 0) {
+			throw ValueError("no screens configured")
 		}
-		return screens
+		if (!this.guiManager.inputSGM) {
+			this.guiManager.inputSGM := this.guiManager.screenGuiManagers[0]
+			printDebugF("choosing input GUI: {}", this.guiManager.inputSGM.screen)
+			this.guiManager.inputSGM.input := true
+		}
 	}
 }
 
@@ -731,6 +703,13 @@ eq(a, b) {
 
 getProp(o, propName, defaultValue := false) {
 	return o.hasProp(propName) ? o.%propName% : defaultValue
+}
+
+getMandatoryProp(o, propName, errorMessage := (o '.' propName ' not set')) {
+	if (o.hasProp(propName)) {
+		return o.%propName%
+	}
+	throw ValueError(errorMessage)
 }
 
 join(sep, a) {
@@ -846,11 +825,11 @@ moveToOrInsertAt0(array, elem) {
 }
 
 parseTileParameter(cmdString, &i, &cmdStrPart) {
-	for , s in config.screens {
-		for t in s.tiles {
+	for sgm in g.guiManager.screenGuiManagers {
+		for i, t in sgm.tiles {
 			if (skip(cmdString, t.input, &i)) {
 				cmdStrPart := t.input
-				return t
+				return { index: i, tile: t, screenGuiManager: sgm }
 			}
 		}
 	}
@@ -883,7 +862,7 @@ moveWindowToPos(windowId, pos) {
 	try {
 		return winMove(pos.x, pos.y, pos.w, pos.h, windowId)
 	} catch Error as e {
-		ui.status.setText('ERROR moving window: ' e.message)
+		g.guiManager.inputSGM.status.setText('ERROR moving window: ' e.message)
 	}
 }
 
@@ -895,32 +874,21 @@ winSetMinMax(windowId, value) {
 			default: winRestore(windowId)
 		}
 	} catch Error as e {
-		ui.status.setText('ERROR setting window min/max/restored state: ' e.message)
+		g.guiManager.inputSGM.status.setText('ERROR setting window min/max/restored state: ' e.message)
 	}
 }
 
-getNormalWindowIds(options := {}) {
-	printDebug('my window id: {}', ui.main.hwnd)
+getNormalWindowIds() {
+	printDebugF('my window id: {}', () => arrayMap(g.guiManager.screenGuiManagers, gm => gm.gui.hwnd))
 	results := []
-	excludeId := getProp(options, "excludeId", 0)
-	stopAtId := getProp(options, "stopAtId", 0)
 	for wid_ in winGetList() {
 		wid := wid_ ; workaround for Autohotkey bug? Loop variable does not exist in the printDebugF closure, but this copy does.
 		title := winGetTitle(wid)
-		if (wid == excludeId) {
-			printDebug('winGetList(): excludeId found')
-			include := false
-		} else {
-			include := title !== '' ; TODO: better criterium to exclude non-window results like Shell_TrayWnd?
-		}
+		include := title !== '' ; TODO: better criterium to exclude non-window results like Shell_TrayWnd?
 		printDebugF('winGetList(): id: {}, processName: {}, class: {}, title: {}, include: {}', () =>
 			[wid, winGetProcessName(wid), winGetClass(wid), title, include])
 		if (include) {
 			results.push(wid)
-		}
-		if (wid == stopAtId) {
-			printDebug('winGetList(): stopAtId found')
-			break
 		}
 	}
 	return results

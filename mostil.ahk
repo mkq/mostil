@@ -21,9 +21,11 @@ setTitleMatchMode("RegEx")
 DEBUG := true ; later overwritten with configured value
 
 ; ____________________________________ init
+g := {} ; instead of most global variables
 SHORT_PROGRAM_NAME := "Mostil"
 LONG_PROGRAM_NAME := SHORT_PROGRAM_NAME " - Mostly tiling window layout manager"
-g := {} ; instead of most global variables
+PAD_X := 5
+PAD_Y := 5
 
 init() {
 	printDebug("init")
@@ -188,6 +190,19 @@ class CommandParseResult {
 	}
 }
 
+class Position {
+	__new(x, y, w, h) {
+		this.x := x
+		this.y := y
+		this.w := w
+		this.h := h
+	}
+
+	toString() {
+		return format('{}({}, {}, {}x{})', type(this), this.x, this.y, this.w, this.h)
+	}
+}
+
 ; handles all GUIs (ScreenGuiManagers)
 class GuiManager {
 	__new() {
@@ -222,97 +237,108 @@ class GuiManager {
 	}
 }
 
-; handles the GUI for a single screen
-class ScreenGuiManager {
-	__new(config, screen) {
-		printDebug("init GUI for {}", screen)
-		this.screen := screen
-		this.gui := Gui("+Theme", format('{} - screen "{}"', LONG_PROGRAM_NAME, screen.name))
-		;this.gui.backColor := "81f131"
-		;winSetTransColor(this.gui.backColor, this.gui)
-		this.input := false
-		if (getProp(config, 'input', false)) {
-			this.input := this.gui.add("ComboBox", "w280 vCmd", [])
-			this.input.onEvent("Change", onValueChange)
-			this.okButton := this.gui.add("Button", "Default w60 x+0", "OK")
-			this.cancelButton := this.gui.add("Button", "w60 x+0", "Cancel")
-			this.status := this.gui.add("StatusBar")
-			this.okButton.onEvent("Click", (*) => submit())
-			this.cancelButton.onEvent("Click", (*) => cancel('Button'))
-		}
-
-		this.gui.onEvent("Close", (*) => cancel('window closed'))
-		this.gui.onEvent("Escape", (*) => cancel('escape'))
-		this.gui.show()
-		winMove(config.x, config.y, screen.w, screen.h, this.gui)
-		this.gui.hide()
-	}
-}
-
 class Screen {
-	__new(name, config) {
-		this.name := name
-		this.x := requireInteger(config.x, "screen x")
-		this.y := requireInteger(config.y, "screen y")
-		this.w := requireInteger(config.w, "screen w")
-		this.h := requireInteger(config.h, "screen h")
-
-		if (type(config.split) !== "String") {
-			throw ValueError("invalid screen split mode type " type(config.split))
+	static parseConfig(name, rawConfig) {
+		pos := Position(
+			requireInteger(rawConfig.x, "screen x"),
+			requireInteger(rawConfig.y, "screen y"),
+			requireInteger(rawConfig.w, "screen w"),
+			requireInteger(rawConfig.h, "screen h"))
+		if (type(rawConfig.split) !== "String") {
+			throw ValueError("invalid screen split mode type " type(rawConfig.split))
 		}
 		splitMatcher := ""
-		if (!regexMatch(config.split, "^([hv])(\d+%?)?$", &splitMatcher)) {
-			throw ValueError("invalid screen split mode " config.split)
+		if (!regexMatch(rawConfig.split, "^([hv])(\d+%?)?$", &splitMatcher)) {
+			throw ValueError("invalid screen split mode " rawConfig.split)
 		}
-		this.horizontal := splitMatcher[1] == "h"
-		maxSplitValue := this.horizontal ? this.w : this.h
-		this.defaultSplitValue := parsePercentage(splitMatcher[2] == "" ? "50%" : splitMatcher[2], maxSplitValue,
+		horizontal := splitMatcher[1] == "h"
+		maxSplitValue := horizontal ? pos.w : pos.h
+		defaultSplitValue := parsePercentage(splitMatcher[2] == "" ? "50%" : splitMatcher[2], maxSplitValue,
 			"screen split default value")
-		this.splitValue := this.defaultSplitValue
-		this.grid := config.hasProp("grid") ? parsePercentage(config.grid, maxSplitValue, "screen grid") : 20
-		if (this.defaultSplitValue < 0 || this.grid <= 0) {
+		splitStepSize := rawConfig.hasProp("grid") ? parsePercentage(rawConfig.grid, maxSplitValue, "screen grid") : 20
+		if (defaultSplitValue < 0 || splitStepSize <= 0) {
 			throw ValueError("invalid negative value in screen config")
 		}
+		input := getProp(rawConfig, 'input', false)
 
-		snap := getProp(config, "snap", ["0%", "100%"])
-		if (snap is Array && snap.length == 2
-			&& (this.minValue := parsePercentage(snap[1], maxSplitValue, "snap min")) >= 0
-			&& (this.maxValue := parsePercentage(snap[2], maxSplitValue, "snap max")) >= 0
-			&& this.minValue + this.grid < this.maxValue) {
-			;
-		} else {
+		minMaxSplitValues := getProp(rawConfig, "snap", ["0%", "100%"])
+		if !(minMaxSplitValues is Array && minMaxSplitValues.length == 2
+			&& (minSplitValue := parsePercentage(minMaxSplitValues[1], maxSplitValue, "snap min")) >= 0
+			&& (maxSplitValue := parsePercentage(minMaxSplitValues[2], maxSplitValue, "snap max")) >= 0
+			&& minSplitValue + splitStepSize < maxSplitValue) {
 			throw ValueError("invalid screen snap (must be an array of two integers betwees 0 and 100, first < second)")
 		}
 
-		if (type(config.inputs) == "Array" && config.inputs.length == 2
-			&& type(config.inputs[1]) == "String" && type(config.inputs[2]) == "String") {
-			t1input := config.inputs[1]
-			t2input := config.inputs[2]
+		if (type(rawConfig.inputs) == "Array" && rawConfig.inputs.length == 2
+			&& type(rawConfig.inputs[1]) == "String" && type(rawConfig.inputs[2]) == "String") {
+			t1input := rawConfig.inputs[1]
+			t2input := rawConfig.inputs[2]
 			if (t1input == t2input) {
 				throw ValueError("duplicate screen key " t1input)
 			}
 		} else {
 			throw ValueError("invalid screen inputs (must be an array of two different strings)")
 		}
-		tilePositions := this.computeTilePositions_()
-		this.tiles := [Tile(this, 1, t1input, tilePositions[1]), Tile(this, 2, t2input, tilePositions[2])]
+		tile1 := Tile(this, 1, t1input)
+		tile2 := Tile(this, 2, t2input)
+
+		return Screen(name, pos, horizontal, minSplitValue, maxSplitValue, defaultSplitValue, splitStepSize, tile1, tile2, input)
+	}
+
+	__new(name, pos, horizontal, minSplitValue, maxSplitValue, defaultSplitValue, splitStepSize, tile1, tile2, withInput) {
+		this.config := {
+			name: name,
+			position: pos,
+			horizontal: horizontal,
+			minSplitValue: minSplitValue,
+			maxSplitValue: maxSplitValue,
+			defaultSplitValue: defaultSplitValue,
+			splitStepSize: splitStepSize,
+		}
+		this.tiles := Map(
+			tile1.input, tile1,
+			tile2.input, tile2)
+		this.tiles.default := false
+		this.splitValue := this.config.split.defaultValue
+		this.gui := {
+			gui: (g := Screen.initGui_(name, withInput, pos)).gui,
+			input: g.input,
+			statusBar: g.statusBar
+		}
+	}
+
+	static initGui_(name, withInput, pos) {
+		printDebug("init GUI for screen {}", name)
+		g := Gui("+Theme", format('{} - screen "{}"', LONG_PROGRAM_NAME, name))
+		result := { gui: g }
+		;g.backColor := "81f131"
+		;winSetTransColor(g.backColor, g)
+		if (withInput) {
+			input := g.addComboBox("w280 vCmd", [])
+			input.onEvent("Change", onValueChange)
+			okButton := g.addButton("Default w60 x+0", "OK")
+			cancelButton := g.addButton("w60 x+0", "Cancel")
+			status := g.addStatusBar()
+			okButton.onEvent("Click", (*) => submit())
+			cancelButton.onEvent("Click", (*) => cancel('Button'))
+			result.input := input
+			result.statusBar := status
+		}
+		g.onEvent("Close", (*) => cancel('window closed'))
+		g.onEvent("Escape", (*) => cancel('escape'))
+		g.show()
+		moveWindowToPos(g, pos)
+
+		g.hide()
+		return result
 	}
 
 	toString() {
-		return format('{}("{}", {}, {}, {}x{})', type(this), this.name, this.x, this.y, this.w, this.h)
+		return format('{}("{}", {})', type(this), this.config.name, this.config.position)
 	}
 
-	getTileForInput(inputChar) {
-		for (t in this.tiles) {
-			if (t.key == inputChar) {
-				return t
-			}
-		}
-		return false
-	}
-
-	computeTilePositions_() {
-		if (this.horizontal) {
+	static computeTilePositions_(horizontal) {
+		if (horizontal) {
 			; +-------+--------------+    y
 			; |       |              |
 			; +-------+--------------+   y+h
@@ -351,16 +377,24 @@ class Screen {
 }
 
 class Tile {
-	__new(screen, index, input, pos) {
+	__new(screen, index, name) {
 		this.screen := screen
 		this.index := index
-		this.input := input
-		this.pos := pos
+		this.name := name
+		this.icon := { handle: 0, file: "", index: 0 }
+		this.text := ""
 		this.windowIds := []
 	}
 
 	toString() {
-		return format("{}({}[{}], key `"{}`")", type(this), this.screen.toString(), this.index, this.input)
+		return format("{}({}[{}], key `"{}`")", type(this), this.screen.toString(), this.index, this.name)
+	}
+
+	drawTo(pos)
+	{
+		this.guiCtrl := screen.gui.gui.addGroupBox(
+			format("x{} y{} w{} h{}", pos.x + PAD_X, pos.y + PAD_Y, pos.w - 2 * PAD_X, pos.h - 2 * PAD_Y),
+			name)
 	}
 
 	; Moves the parent screen's split in the direction corresponding to this tile, making this tile smaller and the sibling
@@ -369,7 +403,7 @@ class Tile {
 		this.screen.moveSplit(this.index)
 	}
 
-	; Called by the paren screen to move all windows placed in this tile to the given coordinates.
+	; Called by the parent screen to move all windows placed in this tile to the given coordinates.
 	; Also deletes remembered window IDs which no longer exist.
 	setPosition(windowPos) {
 		this.pos := windowPos
@@ -388,6 +422,10 @@ class Tile {
 			this.windowIds.push(windowId)
 		}
 	}
+
+	setIcon(icon) {
+		todo()
+	}
 }
 
 ; ____________________________________ commands
@@ -397,9 +435,11 @@ class PlaceWindowCommandParser extends CommandParser {
 		command := getProp(config, "run", "")
 		previewIcon := getProp(config, "previewIcon", false)
 		if (previewIcon) { ; parse previewIcon (format "[index]file" or just "file")
-			previewIcon := regExMatch(previewIcon, '^\[(\d+)\](.+)', &match) ? { index: match[1], file: match[2] } : { index: 1, file: previewIcon }
-		} else { ; default previewIcon: 1st word of command
-			previewIcon := { index: 1, file: regExReplace(command, '\s.*', '') }
+			previewIcon := regExMatch(previewIcon, '^\[(\d+)\](.+)', &match) ? { index: match[1], file: match[2] } : { file: previewIcon, index: 1 }
+		} else if (strlen(command) > 0) { ; default previewIcon: 1st word of command
+			previewIcon := { file: regExReplace(command, '\s.*', ''), index: 1 }
+		} else {
+			previewIcon := { file: "shell32.dll", index: 1 }
 		}
 		return PlaceWindowCommandParser(config.input, getProp(config, "name", ""), getProp(config, "criteria"), previewIcon, command)
 	}
@@ -438,13 +478,14 @@ class PlaceWindowCommandParser extends CommandParser {
 }
 
 class PlaceWindowCommand extends Command {
-	__new(selectedTileInfo, name, criteria, launchCmdStr := "") {
+	__new(selectedTileInfo, name, criteria, launchCmdStr, previewIcon) {
 		this.selectedTileInfo := selectedTileInfo
 		this.windowSpec := {
 			name: name,
 			criteria: criteria,
 			launchCommand: launchCmdStr
 		}
+		this.previewIcon := previewIcon
 		this.windowId := 0
 		this.launchPending := false
 		this.oldTileText := selectedTileInfo.guiManager.getText()
@@ -462,7 +503,7 @@ class PlaceWindowCommand extends Command {
 			myWindowIds := arrayMap(g.guiManager.screenGuiManagers, gm => gm.gui.hwnd)
 			this.windowId := 0
 			for wid in getNormalWindowIds() {
-				if (arrayIndexOf(myWindowIds, wid) > 0) {
+				if (arrayIndexOf(myWindowIds, wid) == 0) {
 					this.windowId := wid
 					break
 				}
@@ -478,9 +519,10 @@ class PlaceWindowCommand extends Command {
 				return
 			}
 			this.selectedTileInfo.guiManager.setText(this.windowSpec.launchCommand " (pending launch)")
-			this.selectedTileInfo.guiManager.setIcon(getIconForCommand(this.windowSpec.launchCommand))
+			this.selectedTileInfo.guiManager.setIconFromFile(this.previewIcon.file, this.previewIcon.index)
 		} else {
-			this.selectedTileInfo.guiManager.setIcon(getWindowIcon(this.windowId))
+			this.selectedTileInfo.guiManager.setText("window " this.windowId)
+			this.selectedTileInfo.guiManager.setIconFromHandle(getWindowIcon(this.windowId))
 		}
 	}
 
@@ -858,7 +900,7 @@ parsePercentage(str, maxValue, valueDescription) {
 getWindowPos(windowId) {
 	x := y := w := h := ""
 	winGetPos(&x, &y, &w, &h, windowId)
-	return { x: x, y: y, w: w, h: h }
+	return Position(x, y, w, h)
 }
 
 moveWindowToPos(windowId, pos) {
@@ -895,4 +937,8 @@ getNormalWindowIds() {
 		}
 	}
 	return results
+}
+
+getWindowIcon(windowId) {
+	return sendMessage(0x7F, 1, , windowId) ; 0x7F = WM_GETICON, wParam 1 = large, lParam = DPI
 }

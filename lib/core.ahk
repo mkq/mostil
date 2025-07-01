@@ -88,6 +88,7 @@ class Screen {
 		;g.backColor := "81f131"
 		;winSetTransColor(g.backColor, g)
 		if (uiConfig.hasInput) {
+			g.onEvent("Close", (*) => exitApp())
 			input := g.addComboBox("w280 vCmd", [])
 			input.onEvent("Change", onValueChange)
 			okButton := g.addButton("Default w60 x+0", "OK")

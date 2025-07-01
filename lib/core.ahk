@@ -115,7 +115,7 @@ class Screen {
 	}
 
 	computeTilePositions_() {
-		p := config.position
+		p := this.config.position
 		if (this.config.horizontal) {
 			; +-------+--------------+    y
 			; |       |              |
@@ -144,13 +144,27 @@ class Screen {
 		this.splitValue := tileIndex == 1 ? max(this.splitValue - this.config.splitStepSize, this.config.minSplitValue) :
 			tileIndex == 2 ? min(this.splitValue + this.config.splitStepSize, this.config.maxSplitValue) :
 			this.config.defaultSplitValue
-		tilePositions := this.computeTilePositions_()
-		this.tiles[1].setPosition(tilePositions[1])
-		this.tiles[2].setPosition(tilePositions[2])
+		;tilePositions := this.computeTilePositions_()
+		;this.tiles[1].setPosition(tilePositions[1])
+		;this.tiles[2].setPosition(tilePositions[2])
+		; TODO redraw
 	}
 
 	resetSplit() {
 		return this.moveSplit()
+	}
+
+	draw()
+	{
+		; TODO: complete
+		;this.guiCtrl := this.screen.gui.gui.addGroupBox(
+		;	format("x{} y{} w{} h{}", pos.x + PAD_X, pos.y + PAD_Y, pos.w - 2 * PAD_X, pos.h - 2 * PAD_Y),
+		;	this.name)
+	}
+
+	moveWindowToTileIndex(windowId, i) {
+		pos := this.computeTilePositions_()[i]
+		return moveWindowToPos(windowId, pos)
 	}
 }
 
@@ -159,23 +173,25 @@ class Tile {
 	__new(index, name) {
 		this.screen := false
 		this.index := index
-		this.name := name
-		this.icon := { handle: 0, file: "", index: 0 }
-		this.text := ""
 		this.windowIds := []
+		this.icon_ := Icon()
+		this.text_ := ""
 	}
 
 	toString() {
-		return format("{}({}[{}], key `"{}`")", type(this), this.screen.toString(), this.index, this.name)
+		return format("{}({}[{}])", type(this), this.screen.toString(), this.index)
 	}
 
-	drawTo(pos)
-	{
-		; TODO: complete
-		; TODO: move to Screen?
-		;this.guiCtrl := this.screen.gui.gui.addGroupBox(
-		;	format("x{} y{} w{} h{}", pos.x + PAD_X, pos.y + PAD_Y, pos.w - 2 * PAD_X, pos.h - 2 * PAD_Y),
-		;	this.name)
+	text {
+		get => this.text_
+		set => this.text_ := value
+	}
+
+	; A Tile has a real icon and text only temporarily when PlaceWindowCommand sets it to show
+	; a preview of its action. However, this is implemented as an always present Icon instance
+	; which can also (and initially does) represent a null Icon:
+	icon {
+		get => this.icon_
 	}
 
 	; Moves the parent screen's split in the direction corresponding to this tile, making this tile smaller and the sibling
@@ -199,29 +215,40 @@ class Tile {
 	}
 
 	grabWindow(windowId) {
-		if (moveWindowToPos(windowId, this.pos)) {
+		if (this.screen.moveWindowToTileIndex(windowId, this.index))
 			this.windowIds.push(windowId)
+	}
+}
+
+class Icon {
+	__new() {
+		this.file := ""
+		this.index := 0
+		this.handle := 0
+	}
+
+	guiAddOption {
+		get => strlen(this.file) > 0 && this.index ? ("Icon" this.index) : false
+	}
+	guiAddArg {
+		get => strlen(this.file) > 0 ? this.file : this.handle ? ("hicon" this.handle) : false
+	}
+	; can be used to save and restore the current state, but uses an internal unspecified format:
+	internalFormat {
+		get => { file: this.file, index: this.index, handle: this.handle }
+		set {
+			this.file := getProp(value, "file", "")
+			this.index := getProp(value, "index", 1)
+			this.handle := getProp(value, "handle", 0)
 		}
 	}
 
-	getText() {
-		; TODO
-	}
-	setText(text) {
-		; TODO
+	setToFile(file, index := 1) {
+		this.internalFormat := { file: file, index: index }
 	}
 
-	getIcon() {
-		;TODO
-	}
-	setIcon(previousSetIconResult) {
-		;TODO
-	}
-	setIconFromFile(file, index := 1) {
-		; TODO set icon and return something that setIcon can handle
-	}
-	setIconFromHandle(hIcon) {
-		; TODO set icon and return something that setIcon can handle
+	setToHandle(hIcon) {
+		this.internalFormat := { handle: hIcon }
 	}
 }
 

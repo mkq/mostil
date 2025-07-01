@@ -21,11 +21,18 @@ setTitleMatchMode("RegEx")
 ; - Add configurable command separator char? That would e.g. enable multiple focus commands even if a placeWindow input starts
 ;   with a char equal to a tile.
 ; - If any own window is activated, activate the one with input instead.
+; - new command to close a window
+; - new command to activate previously active window; example command strings if this is bound to "^":
+;   - "en^" => select window "e", move it to tile "n", focus back.
+;   - "e^" => select window "e", focus back. => Can be used to bring window "e" to z-order 2.
+; - new sleep command (e.g. bound to "^^") with optional number of seconds.
+;   Example combination with activate previously active window command:
+;   - "e^3^" => select window "e", wait 3s, focus back. => Can be used to briefly check a window.
 
 DEBUG_OUTPUT := true ; later overwritten with configured value
 
 ; ____________________________________ init
-gl := {} ; instead of most global variables
+gl := {} ; instead of most global variables; TODO completely avoid globals
 SHORT_PROGRAM_NAME := "Mostil"
 LONG_PROGRAM_NAME := SHORT_PROGRAM_NAME " - Mostly tiling window layout manager"
 PAD_X := 5
@@ -37,6 +44,7 @@ init() {
 	gl.commandParsers := c.commandParsers
 	gl.screensManager := c.screensManager
 	gl.closeOnFocusLostAllowed := true
+	gl.defaultInputs := []
 	global DEBUG_OUTPUT := c.debug
 	onMessage(0x6, (wp, lp, msg, hwnd) => ; WM_ACTIVATE
 		(c.closeOnFocusLost && gl.closeOnFocusLostAllowed && !wp && gl.screensManager.containsWindowId(hwnd))

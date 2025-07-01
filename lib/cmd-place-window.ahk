@@ -15,10 +15,11 @@ class PlaceWindowCommandParser extends CommandParser {
 		return PlaceWindowCommandParser(config.input, getProp(config, "name", ""), getProp(config, "criteria"), previewIcon, cmd)
 	}
 
-	__new(windowInput, name, criteria, previewIcon, launchCmdStr := "") {
+	__new(windowInput, name, criteria, defaultPreviewIcon, launchCmdStr := "") {
 		this.windowInput := windowInput
 		this.name := name
 		this.criteria := criteria
+		this.defaultPreviewIcon := defaultPreviewIcon
 		this.launchCmdStr := launchCmdStr
 	}
 
@@ -28,8 +29,7 @@ class PlaceWindowCommandParser extends CommandParser {
 		}
 		tileInput := ""
 		t := parseTileParameter(cmdStr, &i, &tileInput)
-		previewIcon := { file: "shell32.dll", index: 7 } ; TODO
-		cmd := PlaceWindowCommand(t, this.name, this.criteria, this.launchCmdStr, previewIcon)
+		cmd := PlaceWindowCommand(t, this.name, this.criteria, this.launchCmdStr, this.defaultPreviewIcon)
 		; A PlaceWindowCommand with selected tile should replace one for the same window.
 		; This happens all the time when the user types the window name followed by the tile.
 		; TODO Is the condition sufficient or must all preceding commands in pendingCommandParseResults and
@@ -52,18 +52,18 @@ class PlaceWindowCommandParser extends CommandParser {
 }
 
 class PlaceWindowCommand extends Command {
-	__new(selectedTile, name, criteria, launchCmdStr, previewIcon) {
+	__new(selectedTile, name, criteria, launchCmdStr, defaultPreviewIcon) {
 		this.selectedTile := selectedTile
 		this.windowSpec := {
 			name: name,
 			criteria: criteria,
 			launchCommand: launchCmdStr
 		}
-		this.previewIcon := previewIcon
+		this.defaultPreviewIcon := defaultPreviewIcon
 		this.windowId := 0
 		this.launchPending := false
-		this.oldTileText := selectedTile ? selectedTile.getText() : false
-		this.oldTileIcon := selectedTile ? selectedTile.getIcon() : false
+		this.oldTileText := selectedTile ? selectedTile.text : false
+		this.oldTileIcon := selectedTile ? selectedTile.icon.internalFormat : false
 	}
 
 	toString() {
@@ -92,19 +92,22 @@ class PlaceWindowCommand extends Command {
 			if (!this.windowSpec.launchCommand) {
 				return
 			}
-			this.selectedTile.setText(this.windowSpec.launchCommand " (pending launch)")
-			this.selectedTile.setIconFromFile(this.previewIcon.file, this.previewIcon.index)
-		} else {
-			this.selectedTile.setText("window " this.windowId)
-			this.selectedTile.setIconFromHandle(getWindowIcon(this.windowId))
+			this.oldTileText := this.selectedTile.text := this.windowSpec.launchCommand " (pending launch)"
+			this.oldTileIcon := this.selectedTile.icon.setToFile(this.defaultPreviewIcon.file, this.defaultPreviewIcon.index)
+		} else if (this.selectedTile) {
+			this.oldTileText := this.selectedTile.text := "window " this.windowId
+			this.oldTileIcon := this.selectedTile.icon.setToHandle(getWindowIcon(this.windowId))
 		}
 	}
 
 	submit() {
+		if (this.selectedTile) {
+			this.selectedTile.text := this.oldTileText
+			this.selectedTile.icon.internalFormat := this.oldTileIcon
+		}
+
 		if (this.launchPending) {
 			this.launchPending := false
-			this.selectedTile.setText(this.oldTileText)
-			this.selectedTile.setIcon(this.oldTileIcon)
 
 			printDebug('run: {}', this.windowSpec.launchCommand)
 			run(this.windowSpec.launchCommand)
@@ -127,7 +130,9 @@ class PlaceWindowCommand extends Command {
 
 	undo() {
 		this.launchPending := false
-		this.selectedTile.setText(this.oldTileText)
-		this.selectedTile.setIcon(this.oldTileIcon)
+		if (this.selectedTile) {
+			this.selectedTile.text := this.oldTileText
+			this.selectedTile.icon.internalFormat := this.oldTileIcon
+		}
 	}
 }

@@ -147,9 +147,9 @@ moveToOrInsertAt0(array, elem) {
 
 parseTileParameter(cmdString, &i, &cmdStrPart) {
 	for s in gl.screensManager.screens {
-		for inp, t in s.tiles {
-			if (skip(cmdString, inp, &i)) {
-				cmdStrPart := inp
+		for t in s.tiles {
+			if (skip(cmdString, t.input, &i)) {
+				cmdStrPart := t.input
 				return t
 			}
 		}
@@ -183,6 +183,12 @@ getWindowPos(windowId) {
 	return Position(x, y, w, h)
 }
 
+getWindowClientPos(windowId) {
+	x := y := w := h := ""
+	winGetClientPos(&x, &y, &w, &h, windowId)
+	return Position(x, y, w, h)
+}
+
 moveWindowToPos(windowId, pos) {
 	try {
 		return winMove(pos.x, pos.y, pos.w, pos.h, windowId)
@@ -201,7 +207,8 @@ winSetMinMax(windowId, value) {
 		}
 	} catch Error as e {
 		; TODO This should not need to know such GUI internals
-		gl.screensManager.screenWithInput.gui.statusBar.setText('ERROR setting window min/max/restored state: ' e.message)
+		gl.screensManager.screenWithInput.gui.statusBar.setText('ERROR setting window min/max/restored state: ' e.message
+		)
 	}
 }
 

@@ -8,7 +8,8 @@ class Configuration extends Object {
 		this.debug := getProp(rawConfig, "debug", false)
 		this.closeOnFocusLost := getProp(rawConfig, "closeOnFocusLost", true)
 		this.hotkey := rawConfig.hotkey
-		this.screensManager := Configuration.parseScreensConfig_(getMandatoryProp(rawConfig, 'screens', 'no screens configured'))
+		this.screensManager := Configuration.parseScreensConfig_(getMandatoryProp(rawConfig, 'screens',
+			'no screens configured'))
 		this.commandParsers := Configuration.parseCommandsConfig_(rawConfig.commands)
 		printDebug("Configuration ctor end")
 	}
@@ -42,11 +43,11 @@ class Configuration extends Object {
 		for screenName, screenRawConfig in rawConfigs.ownProps() {
 			s := Configuration.parseScreenConfig_(screenName, screenRawConfig)
 			screens.push(s)
-			for tileInput, t in s.tiles {
-				if (arrayIndexOf(tileInputs, tileInput) > 0) {
-					throw ValueError("duplicate screen input " tileInput)
+			for t in s.tiles {
+				if (arrayIndexOf(tileInputs, t.input) > 0) {
+					throw ValueError("duplicate screen input " t.input)
 				}
-				tileInputs.push(tileInput)
+				tileInputs.push(t.input)
 			}
 		}
 		if (screens.length == 0) {
@@ -86,7 +87,7 @@ class Configuration extends Object {
 		}
 
 		if (type(rawConfig.inputs) == "Array" && rawConfig.inputs.length == 2
-			&& type(rawConfig.inputs[1]) == "String" && type(rawConfig.inputs[2]) == "String") {
+		&& type(rawConfig.inputs[1]) == "String" && type(rawConfig.inputs[2]) == "String") {
 			t1input := rawConfig.inputs[1]
 			t2input := rawConfig.inputs[2]
 			if (t1input == t2input) {
@@ -95,16 +96,14 @@ class Configuration extends Object {
 		} else {
 			throw ValueError("invalid screen inputs (must be an array of two different strings)")
 		}
-		tile1 := Tile(1, Configuration.tileNameForInput_(t1input))
-		tile2 := Tile(2, Configuration.tileNameForInput_(t2input))
+		tile1 := Tile(1, Configuration.tileNameForInput_(t1input), t1input)
+		tile2 := Tile(2, Configuration.tileNameForInput_(t2input), t2input)
 
 		uiRawConfig := getProp(rawConfig, "ui", { x: pos.x, y: pos.y, scale: "100%", input: false })
 		uiConfig := Configuration.parseScreenUiConfig_(uiRawConfig, pos)
 
 		return Screen(name, pos, horizontal, minSplitValue, maxSplitValue, defaultSplitValue, splitStepSize, uiConfig,
-			Map(
-				t1input, tile1,
-				t2input, tile2))
+			[tile1, tile2])
 	}
 
 	static parseScreenUiConfig_(rawConfig, screenPos) {
@@ -112,9 +111,8 @@ class Configuration extends Object {
 		if (input != false && input != true) {
 			throw ValueError("invalid screen ui input")
 		}
-
-		x := requireInteger(rawConfig.x, "screen ui x")
-		y := requireInteger(rawConfig.y, "screen ui y")
+		x := requireInteger(getProp(rawConfig, "x", screenPos.x), "screen ui x")
+		y := requireInteger(getProp(rawConfig, "y", screenPos.y), "screen ui y")
 		percentage := requireInteger(regexReplace(getProp(rawConfig, "scale", "100"), '%$', ''), 'screen ui scale')
 		w := computePercentage(screenPos.w, percentage)
 		h := computePercentage(screenPos.h, percentage)
@@ -125,6 +123,6 @@ class Configuration extends Object {
 	}
 
 	static tileNameForInput_(tileInput) {
-		return format('"{}"', tileInput)
+		return format('[ {} ]', tileInput)
 	}
 }

@@ -53,11 +53,18 @@ class Position {
 	toString() {
 		return format('{}({}, {}, {}x{})', type(this), this.x, this.y, this.w, this.h)
 	}
+
+	toGuiOpt() {
+		return format("x{} y{} w{} h{}", this.x, this.y, this.w, this.h)
+	}
 }
 
 ; An area split vertically or horizontally, thereby consisting of two Tiles.
 class Screen {
 	__new(name, pos, horizontal, minSplitValue, maxSplitValue, defaultSplitValue, splitStepSize, uiConfig, tiles) {
+		if (type(tiles) !== "Array" || tiles.length !== 2) {
+			throw ValueError("tiles is not an array of length 2")
+		}
 		this.config := {
 			name: name,
 			position: pos,
@@ -68,43 +75,12 @@ class Screen {
 			splitStepSize: splitStepSize,
 			gui: uiConfig
 		}
-		this.tiles := tiles ; Map: input -> Tile
-		this.tiles.default := false
+		this.tiles := tiles
 		this.splitValue := this.config.defaultSplitValue
-		this.gui := {
-			gui: (g := Screen.initGui_(name, pos, uiConfig)).gui,
-			input: g.input,
-			statusBar: g.statusBar
-		}
-		for , t in tiles {
+		for t in tiles {
 			t.screen := this
 		}
-	}
-
-	static initGui_(name, pos, uiConfig) {
-		printDebug("init GUI for screen {}", name)
-		g := Gui("+Theme", format('{} - screen "{}"', LONG_PROGRAM_NAME, name))
-		result := { gui: g, input: false, statusBar: false }
-		;g.backColor := "81f131"
-		;winSetTransColor(g.backColor, g)
-		if (uiConfig.hasInput) {
-			g.onEvent("Close", (*) => exitApp())
-			input := g.addComboBox("w280 vCmd", [])
-			input.onEvent("Change", onValueChange)
-			okButton := g.addButton("Default w60 x+0", "OK")
-			cancelButton := g.addButton("w60 x+0", "Cancel")
-			okButton.onEvent("Click", (*) => submit())
-			cancelButton.onEvent("Click", (*) => cancel('Button'))
-			result.input := input
-			result.statusBar := g.addStatusBar()
-		}
-		g.onEvent("Close", (*) => cancel('window closed'))
-		g.onEvent("Escape", (*) => cancel('escape'))
-		g.show()
-		moveWindowToPos(g, pos)
-
-		g.hide()
-		return result
+		this.gui := false ; { gui: Gui, input: ComboBox, statusBar: StatusBar }
 	}
 
 	toString() {
@@ -112,19 +88,66 @@ class Screen {
 	}
 
 	hasInput() {
-		return this.gui.input != false
+		return this.config.gui.hasInput
+	}
+
+	show() {
+		if (!this.gui) {
+			this.initGui_()
+		}
+		this.gui.gui.show()
+	}
+
+	hide() {
+		if (this.gui) {
+			this.gui.gui.hide()
+		}
+	}
+
+	initGui_() {
+		printDebug("init GUI for screen {}", this.toString())
+		g := Gui("+Theme", format('{} - screen "{}"', LONG_PROGRAM_NAME, this.config.name))
+
+		input := false
+		status := false
+		if (this.hasInput()) {
+			g.onEvent("Close", (*) => exitApp())
+			; TODO center input and buttons
+			input := g.addComboBox("w280 vCmd", [])
+			input.onEvent("Change", onValueChange)
+			okButton := g.addButton("Default w60 x+0", "OK")
+			cancelButton := g.addButton("w60 x+0", "Cancel")
+			okButton.onEvent("Click", (*) => submit())
+			cancelButton.onEvent("Click", (*) => cancel('Button'))
+			status := g.addStatusBar()
+		}
+		g.onEvent("Close", (*) => cancel('window closed'))
+		g.onEvent("Escape", (*) => cancel('escape'))
+
+		this.gui := {
+			gui: g,
+			input: input,
+			statusBar: status
+		}
+
+		g.show()
+		moveWindowToPos(g, this.config.position)
+		for i, tilePos in this.computeTilePositions_() {
+			g.addGroupBox(tilePos.toGuiOpt(), this.tiles[i].name)
+		}
 	}
 
 	computeTilePositions_() {
-		p := this.config.position
+		pos := getWindowClientPos(this.gui.gui)
+		pos.x := pos.y := 0 ; we need relative tile coordinates
 		if (this.config.horizontal) {
 			; +-------+--------------+    y
 			; |       |              |
 			; +-------+--------------+   y+h
 			; x      x+s            x+w
 			results := [ ;
-				{ x: p.x, y: p.y, w: this.splitValue, h: p.h }, ;
-				{ x: p.x + this.splitValue, y: p.y, w: p.w - this.splitValue, h: p.h }]
+				Position(pos.x, pos.y, this.splitValue, pos.h), ;
+				Position(pos.x + this.splitValue, pos.y, pos.w - this.splitValue, pos.h)]
 		} else {
 			; +-------+  y
 			; |       |
@@ -134,17 +157,17 @@ class Screen {
 			; +-------+ y+h
 			; x      x+w
 			results := [ ;
-				{ x: p.x, y: p.y, w: p.w, h: this.splitValue }, ;
-				{ x: p.x, y: p.y + this.splitValue, w: p.w, h: p.h - this.splitValue }]
+				Position(pos.x, pos.y, pos.w, this.splitValue), ;
+				Position(pos.x, pos.y + this.splitValue, pos.w, pos.h - this.splitValue)]
 		}
-		printDebugF("computeTilePositions_() == {}", () => [dump(results)])
+		printDebugF("computeTilePositions_({}) == {}", () => [pos, dump(results)])
 		return results
 	}
 
 	moveSplit(tileIndex := 0) {
 		this.splitValue := tileIndex == 1 ? max(this.splitValue - this.config.splitStepSize, this.config.minSplitValue) :
 			tileIndex == 2 ? min(this.splitValue + this.config.splitStepSize, this.config.maxSplitValue) :
-			this.config.defaultSplitValue
+				this.config.defaultSplitValue
 		;tilePositions := this.computeTilePositions_()
 		;this.tiles[1].setPosition(tilePositions[1])
 		;this.tiles[2].setPosition(tilePositions[2])
@@ -155,14 +178,6 @@ class Screen {
 		return this.moveSplit()
 	}
 
-	draw()
-	{
-		; TODO: complete
-		;this.guiCtrl := this.screen.gui.gui.addGroupBox(
-		;	format("x{} y{} w{} h{}", pos.x + PAD_X, pos.y + PAD_Y, pos.w - 2 * PAD_X, pos.h - 2 * PAD_Y),
-		;	this.name)
-	}
-
 	moveWindowToTileIndex(windowId, i) {
 		pos := this.computeTilePositions_()[i]
 		return moveWindowToPos(windowId, pos)
@@ -171,9 +186,11 @@ class Screen {
 
 ; One "half" of a Screen
 class Tile {
-	__new(index, name) {
-		this.screen := false
+	__new(index, name, input) {
 		this.index := index
+		this.name := name
+		this.input := input
+		this.screen := false
 		this.windowIds := []
 		this.icon_ := Icon()
 		this.text_ := ""
@@ -216,8 +233,9 @@ class Tile {
 	}
 
 	grabWindow(windowId) {
-		if (this.screen.moveWindowToTileIndex(windowId, this.index))
+		if (this.screen.moveWindowToTileIndex(windowId, this.index)) {
 			this.windowIds.push(windowId)
+		}
 	}
 }
 
@@ -273,11 +291,11 @@ class ScreensManager {
 	}
 
 	show() {
-		this.forEachInputScreenLast_(s => s.gui.gui.show())
+		this.forEachInputScreenLast_(s => s.show())
 	}
 
 	hide() {
-		this.forEachInputScreenLast_(s => s.gui.gui.hide())
+		this.forEachInputScreenLast_(s => s.hide())
 	}
 
 	forEachInputScreenLast_(f) {

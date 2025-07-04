@@ -36,7 +36,7 @@ class ResizeSplitCommandParser extends CommandParser {
 	parseArg_(cmdStr, &i, resetChar, inputPrefix) {
 		len := strlen(cmdStr)
 		if (skip(cmdStr, resetChar, &i)) {
-			return ResizeSplitCommand()
+			return CommandParseResult(inputPrefix . resetChar, ResizeSplitCommand())
 		}
 		input := ""
 		t := parseTileParameter(cmdStr, &i, &input)
@@ -59,15 +59,19 @@ class ResizeSplitCommand extends Command {
 		} else {
 			gl.screensManager.forEachScreen(s => s.resetSplit())
 		}
+
 		; TODO resize all windows in the tile and its sibling tile
-		return this
 	}
 
 	submit() {
-		;TODO
+		; nothing to do
 	}
 
 	undo() {
-		;TODO
+		if (this.selectedTile is Tile) {
+			this.selectedTile.screen.updateWindowPositions()
+		} else {
+			gl.screensManager.forEachScreen(s => s.updateWindowPositions())
+		}
 	}
 }

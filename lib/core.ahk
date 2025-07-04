@@ -31,12 +31,11 @@ class Command {
 }
 
 class CommandParseResult {
-	input := unset
-	command := unset
 	__new(input, command) {
 		this.input := input
 		this.command := command
 	}
+
 	toString() {
 		return format('["{}" → {}]', this.input, String(this.command))
 	}
@@ -85,7 +84,7 @@ class Screen {
 		g := Gui("+Theme", format('{} - screen "{}"', LONG_PROGRAM_NAME, this.name))
 
 		g.show()
-		moveWindowToPos(g, this.targetSplitPosition.position)
+		moveWindowToPos(g, this.guiPosition)
 		windowRelativePos := getWindowClientPos(g)
 		windowRelativePos.x := windowRelativePos.y := 0
 		splitPos := SplitPosition(this.targetSplitPosition.horizontal,
@@ -157,6 +156,10 @@ class Screen {
 		pos := this.targetSplitPosition.getChildPositions()[i]
 		return moveWindowToPos(windowId, pos)
 	}
+
+	updateWindowPositions() {
+		; TODO
+	}
 }
 
 ; One "half" of a Screen
@@ -172,7 +175,7 @@ class Tile {
 	}
 
 	toString() {
-		return format("{}({}[{}])", type(this), this.screen.toString(), this.index)
+		return format("{} [{}] of {}", type(this), this.index, this.screen.toString())
 	}
 
 	text {
@@ -265,14 +268,20 @@ class ScreensManager {
 	}
 
 	show() {
-		this.forEachInputScreenLast_(s => s.show())
+		this.forEachScreenInputScreenLast(s => s.show())
 	}
 
 	hide() {
-		this.forEachInputScreenLast_(s => s.hide())
+		this.forEachScreen(s => s.hide())
 	}
 
-	forEachInputScreenLast_(f) {
+	forEachScreen(f) {
+		for s in this.screens {
+			f(s)
+		}
+	}
+
+	forEachScreenInputScreenLast(f) {
 		for s in this.screens {
 			if (s !== this.screenWithInput) {
 				f(s)

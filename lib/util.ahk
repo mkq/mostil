@@ -196,6 +196,7 @@ class SplitPosition {
 	}
 
 	reset() {
+		printDebugF('before reset: {}', () => [this.toString()])
 		this.splitPercentage := this.defaultSplitPercentage
 	}
 
@@ -204,13 +205,17 @@ class SplitPosition {
 	}
 
 	increment(stepCount := 1) {
+		printDebugF('before increment({}): {}', () => [stepCount, this.toString()])
 		this.splitPercentage := this.splitPercentage.addPercentage(this.stepPercentage, stepCount)
 		if (this.splitPercentage.lessThan(this.minSplitPercentage)) {
+			printDebug('set to min')
 			this.splitPercentage := this.minSplitPercentage
 		}
 		if (this.splitPercentage.greaterThan(this.maxSplitPercentage)) {
+			printDebug('set to max')
 			this.splitPercentage := this.maxSplitPercentage
 		}
+		printDebugF('after  increment({}): {}', () => [stepCount, this.toString()])
 	}
 
 	getChildPositions() {
@@ -299,7 +304,9 @@ class Percentage {
 		if (otherPercentage.max != this.max) {
 			throw ValueError('different max values not supported')
 		}
-		return Percentage(this.value + otherPercentage.value, this.max)
+		newValue := this.value + multiplier * otherPercentage.value
+		newValue := min(this.max, max(0, newValue))
+		return Percentage(newValue, this.max)
 	}
 }
 

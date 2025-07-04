@@ -79,7 +79,7 @@ submit() {
 }
 
 cancel(reasonMessage) {
-	printDebug("cancel({})", reasonMessage)
+	printDebug('cancel("{}")', reasonMessage)
 	while gl.pendingCommandParseResults.length > 0 {
 		cpr := gl.pendingCommandParseResults.removeAt(-1)
 		printDebug("undo {}", cpr)

@@ -61,7 +61,7 @@ class Position {
 
 ; An area split vertically or horizontally, thereby consisting of two Tiles.
 class Screen {
-	__new(name, pos, horizontal, minSplitValue, maxSplitValue, defaultSplitValue, splitStepSize, uiConfig, tiles) {
+	__new(name, pos, horizontal, minSplitValue, maxSplitValue, defaultSplitPercentage, splitStepSize, uiConfig, tiles) {
 		if (type(tiles) !== "Array" || tiles.length !== 2) {
 			throw ValueError("tiles is not an array of length 2")
 		}
@@ -71,12 +71,12 @@ class Screen {
 			horizontal: horizontal,
 			minSplitValue: minSplitValue,
 			maxSplitValue: maxSplitValue,
-			defaultSplitValue: defaultSplitValue,
+			defaultSplitPercentage: defaultSplitPercentage,
 			splitStepSize: splitStepSize,
 			gui: uiConfig
 		}
 		this.tiles := tiles
-		this.splitValue := this.config.defaultSplitValue
+		this.splitValue := this.config.defaultSplitPercentage
 		for t in tiles {
 			t.screen := this
 		}
@@ -145,9 +145,10 @@ class Screen {
 			; |       |              |
 			; +-------+--------------+   y+h
 			; x      x+s            x+w
+			splitValue := this.config.defaultSplitPercentage.applyTo(pos.w)
 			results := [ ;
-				Position(pos.x, pos.y, this.splitValue, pos.h), ;
-				Position(pos.x + this.splitValue, pos.y, pos.w - this.splitValue, pos.h)]
+				Position(pos.x, pos.y, splitValue, pos.h), ;
+				Position(pos.x + splitValue, pos.y, pos.w - splitValue, pos.h)]
 		} else {
 			; +-------+  y
 			; |       |
@@ -156,9 +157,10 @@ class Screen {
 			; |       |
 			; +-------+ y+h
 			; x      x+w
+			splitValue := this.config.defaultSplitPercentage.applyTo(pos.h)
 			results := [ ;
-				Position(pos.x, pos.y, pos.w, this.splitValue), ;
-				Position(pos.x, pos.y + this.splitValue, pos.w, pos.h - this.splitValue)]
+				Position(pos.x, pos.y, pos.w, splitValue), ;
+				Position(pos.x, pos.y + splitValue, pos.w, pos.h - splitValue)]
 		}
 		printDebugF("computeTilePositions_({}) == {}", () => [pos, dump(results)])
 		return results
@@ -167,7 +169,7 @@ class Screen {
 	moveSplit(tileIndex := 0) {
 		this.splitValue := tileIndex == 1 ? max(this.splitValue - this.config.splitStepSize, this.config.minSplitValue) :
 			tileIndex == 2 ? min(this.splitValue + this.config.splitStepSize, this.config.maxSplitValue) :
-				this.config.defaultSplitValue
+			this.config.defaultSplitPercentage
 		;tilePositions := this.computeTilePositions_()
 		;this.tiles[1].setPosition(tilePositions[1])
 		;this.tiles[2].setPosition(tilePositions[2])

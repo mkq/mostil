@@ -71,23 +71,22 @@ class Configuration extends Object {
 		}
 		horizontal := splitMatcher[1] == "h"
 		maxSplitValue := horizontal ? pos.w : pos.h
-		defaultSplitValue := parsePercentage(splitMatcher[2] == "" ? "50%" : splitMatcher[2], maxSplitValue,
+		defaultSplitPercentage := Percentage.parse(splitMatcher[2] == "" ? "50%" : splitMatcher[2], maxSplitValue,
 			"screen split default value")
-		splitStepSize := rawConfig.hasProp("grid") ? parsePercentage(rawConfig.grid, maxSplitValue, "screen grid") : 20
-		if (defaultSplitValue < 0 || splitStepSize <= 0) {
-			throw ValueError("invalid negative value in screen config")
-		}
+		splitStepSize := Percentage.parse(rawConfig.hasProp("grid") ? rawConfig.grid : 20, maxSplitValue, "screen grid")
 
 		minMaxSplitValues := getProp(rawConfig, "snap", ["0%", "100%"])
-		if !(minMaxSplitValues is Array && minMaxSplitValues.length == 2
-			&& (minSplitValue := parsePercentage(minMaxSplitValues[1], maxSplitValue, "snap min")) >= 0
-			&& (maxSplitValue := parsePercentage(minMaxSplitValues[2], maxSplitValue, "snap max")) >= 0
-			&& minSplitValue + splitStepSize < maxSplitValue) {
+		if !(minMaxSplitValues is Array && minMaxSplitValues.length == 2) {
 			throw ValueError("invalid screen snap (must be an array of two integers betwees 0 and 100, first < second)")
+		}
+		minSplitValue := Percentage.parse(minMaxSplitValues[1], maxSplitValue, "snap min")
+		maxSplitValue := Percentage.parse(minMaxSplitValues[2], maxSplitValue, "snap max")
+		if (minSplitValue.value + splitStepSize.value >= maxSplitValue.value) {
+			throw ValueError("invalid screen snap (must be an array of two integers betwees 0 and 100, first + grid < second)")
 		}
 
 		if (type(rawConfig.inputs) == "Array" && rawConfig.inputs.length == 2
-		&& type(rawConfig.inputs[1]) == "String" && type(rawConfig.inputs[2]) == "String") {
+			&& type(rawConfig.inputs[1]) == "String" && type(rawConfig.inputs[2]) == "String") {
 			t1input := rawConfig.inputs[1]
 			t2input := rawConfig.inputs[2]
 			if (t1input == t2input) {
@@ -102,7 +101,7 @@ class Configuration extends Object {
 		uiRawConfig := getProp(rawConfig, "ui", { x: pos.x, y: pos.y, scale: "100%", input: false })
 		uiConfig := Configuration.parseScreenUiConfig_(uiRawConfig, pos)
 
-		return Screen(name, pos, horizontal, minSplitValue, maxSplitValue, defaultSplitValue, splitStepSize, uiConfig,
+		return Screen(name, pos, horizontal, minSplitValue, maxSplitValue, defaultSplitPercentage, splitStepSize, uiConfig,
 			[tile1, tile2])
 	}
 
@@ -113,9 +112,9 @@ class Configuration extends Object {
 		}
 		x := requireInteger(getProp(rawConfig, "x", screenPos.x), "screen ui x")
 		y := requireInteger(getProp(rawConfig, "y", screenPos.y), "screen ui y")
-		percentage := requireInteger(regexReplace(getProp(rawConfig, "scale", "100"), '%$', ''), 'screen ui scale')
-		w := computePercentage(screenPos.w, percentage)
-		h := computePercentage(screenPos.h, percentage)
+		p := Percentage(requireNumber(regexReplace(getProp(rawConfig, "scale", "100"), '%$', ''), 'screen ui scale'), 100)
+		w := p.applyTo(screenPos.w)
+		h := p.applyTo(screenPos.h)
 		return {
 			pos: Position(x, y, w, h),
 			hasInput: input

@@ -114,6 +114,13 @@ requireInteger(val, valueDescription := "value") {
 	return Integer(val)
 }
 
+requireNumber(val, valueDescription := "value") {
+	if (!isNumber(val)) {
+		throw ValueError(valueDescription " is not a number")
+	}
+	return Number(val)
+}
+
 requireStrLen(str, len) {
 	if (!(str is String) || strlen(str) !== len) {
 		throw ValueError(format("expected string of length {}, but got {}", len, strlen(str)))
@@ -157,24 +164,40 @@ parseTileParameter(cmdString, &i, &cmdStrPart) {
 	return false
 }
 
-parsePercentage(str, maxValue, valueDescription) {
-	isPercentage := false
-	if (substr(str, -1, 1) == "%") {
-		isPercentage := true
-		str := substr(str, 1, -1)
+; Represents a percentage. But in order to be pixel accurate when parsed from an absolute value,
+; it stores the given value and reference (max) value.
+class Percentage {
+	__new(value, max) {
+		this.value := Number(value)
+		this.max := Number(max)
 	}
-	value := requireInteger(str, valueDescription)
-	if (isPercentage) {
-		if (value < 0 || value > 100) {
-			throw ValueError("invalid " valueDescription " percentage")
-		}
-		return maxValue * value / 100
-	}
-	return value
-}
 
-computePercentage(value, percentage) {
-	return percentage == 100 ? value : (value * percentage / 100)
+	static parse(str, max, valueDescription) {
+		isPercentage := false
+		if (substr(str, -1, 1) == "%") {
+			isPercentage := true
+			str := substr(str, 1, -1)
+		}
+		try {
+			value := Number(str)
+			max := Number(max)
+		} catch {
+			throw TypeError(valueDescription)
+		}
+		if (isPercentage) {
+			if (value < 0 || value > 100) {
+				throw ValueError("invalid percentage " valueDescription)
+			}
+			value := max * value / 100
+		} else if (value > max) {
+			throw ValueError("invalid percentage " valueDescription)
+		}
+		return Percentage(value, max)
+	}
+
+	applyTo(value) {
+		return this.value == this.max ? value : (value * this.value / this.max)
+	}
 }
 
 getWindowPos(windowId) {

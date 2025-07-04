@@ -132,14 +132,14 @@ class Screen {
 
 		g.show()
 		moveWindowToPos(g, this.config.position)
-		for i, tilePos in this.computeTilePositions_() {
+		windowRelativePos := getWindowClientPos(g)
+		windowRelativePos.x := windowRelativePos.y := 0
+		for i, tilePos in this.computeTilePositions_(windowRelativePos) {
 			g.addGroupBox(tilePos.toGuiOpt(), this.tiles[i].name)
 		}
 	}
 
-	computeTilePositions_() {
-		pos := getWindowClientPos(this.gui.gui)
-		pos.x := pos.y := 0 ; we need relative tile coordinates
+	computeTilePositions_(pos) {
 		if (this.config.horizontal) {
 			; +-------+--------------+    y
 			; |       |              |
@@ -181,7 +181,7 @@ class Screen {
 	}
 
 	moveWindowToTileIndex(windowId, i) {
-		pos := this.computeTilePositions_()[i]
+		pos := this.computeTilePositions_(this.config.position)[i]
 		return moveWindowToPos(windowId, pos)
 	}
 }

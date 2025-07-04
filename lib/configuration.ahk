@@ -111,7 +111,10 @@ class Configuration extends Object {
 		uiRawConfig := getProp(rawConfig, "ui", { x: pos.x, y: pos.y, scale: "100%", input: false })
 		uiConfig := Configuration.parseScreenUiConfig_(uiRawConfig, pos)
 
-		return Screen(name, pos, horizontal, minSplitValue, maxSplitValue, defaultSplitPercentage, splitStepSize, uiConfig,
+		return Screen(name,
+			SplitPosition(horizontal, pos, defaultSplitPercentage, minSplitValue, maxSplitValue, splitStepSize),
+			uiConfig.position,
+			uiConfig.hasInput,
 			[tile1, tile2])
 	}
 
@@ -126,7 +129,7 @@ class Configuration extends Object {
 		w := p.applyTo(screenPos.w)
 		h := p.applyTo(screenPos.h)
 		return {
-			pos: Position(x, y, w, h),
+			position: Position(x, y, w, h),
 			hasInput: input
 		}
 	}

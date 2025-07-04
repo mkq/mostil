@@ -42,53 +42,29 @@ class CommandParseResult {
 	}
 }
 
-class Position {
-	__new(x, y, w, h) {
-		this.x := x
-		this.y := y
-		this.w := w
-		this.h := h
-	}
-
-	toString() {
-		return format('{}({}, {}, {}x{})', type(this), this.x, this.y, this.w, this.h)
-	}
-
-	toGuiOpt() {
-		return format("x{} y{} w{} h{}", this.x, this.y, this.w, this.h)
-	}
-}
-
 ; An area split vertically or horizontally, thereby consisting of two Tiles.
 class Screen {
-	__new(name, pos, horizontal, minSplitValue, maxSplitValue, defaultSplitPercentage, splitStepSize, uiConfig, tiles) {
+	__new(name, targetSplitPosition, guiPosition, withInput, tiles) {
 		if (type(tiles) !== "Array" || tiles.length !== 2) {
 			throw ValueError("tiles is not an array of length 2")
 		}
-		this.config := {
-			name: name,
-			position: pos,
-			horizontal: horizontal,
-			minSplitValue: minSplitValue,
-			maxSplitValue: maxSplitValue,
-			defaultSplitPercentage: defaultSplitPercentage,
-			splitStepSize: splitStepSize,
-			gui: uiConfig
-		}
+		this.name := name
+		this.input := withInput
+		this.targetSplitPosition := targetSplitPosition
+		this.guiPosition := guiPosition
 		this.tiles := tiles
-		this.splitValue := this.config.defaultSplitPercentage
 		for t in tiles {
 			t.screen := this
 		}
-		this.gui := false ; { gui: Gui, input: ComboBox, statusBar: StatusBar }
+		this.gui := false ; when initialized: { gui: Gui, input: ComboBox, statusBar: StatusBar, splitPosition: SplitPosition }
 	}
 
 	toString() {
-		return format('{}("{}", {})', type(this), this.config.name, String(this.config.position))
+		return format('{}("{}", {})', type(this), this.name, String(this.targetSplitPosition))
 	}
 
 	hasInput() {
-		return this.config.gui.hasInput
+		return this.input
 	}
 
 	show() {
@@ -106,7 +82,22 @@ class Screen {
 
 	initGui_() {
 		printDebug("init GUI for screen {}", this.toString())
-		g := Gui("+Theme", format('{} - screen "{}"', LONG_PROGRAM_NAME, this.config.name))
+		g := Gui("+Theme", format('{} - screen "{}"', LONG_PROGRAM_NAME, this.name))
+
+		g.show()
+		moveWindowToPos(g, this.targetSplitPosition.position)
+		windowRelativePos := getWindowClientPos(g)
+		windowRelativePos.x := windowRelativePos.y := 0
+		splitPos := SplitPosition(this.targetSplitPosition.horizontal,
+			windowRelativePos,
+			this.targetSplitPosition.defaultSplitPercentage,
+			this.targetSplitPosition.minSplitPercentage,
+			this.targetSplitPosition.maxSplitPercentage,
+			this.targetSplitPosition.stepPercentage)
+		groupBoxes := []
+		for i, tilePos in splitPos.getChildPositions() {
+			groupBoxes.push(g.addGroupBox(, this.tiles[i].name))
+		}
 
 		input := false
 		status := false
@@ -114,6 +105,7 @@ class Screen {
 			g.onEvent("Close", (*) => exitApp())
 			; TODO center input and buttons
 			input := g.addComboBox("w280 vCmd", [])
+			input.focus()
 			input.onEvent("Change", onValueChange)
 			okButton := g.addButton("Default w60 x+0", "OK")
 			cancelButton := g.addButton("w60 x+0", "Cancel")
@@ -125,63 +117,44 @@ class Screen {
 		g.onEvent("Escape", (*) => cancel('escape'))
 
 		this.gui := {
+			splitPosition: splitPos,
 			gui: g,
 			input: input,
+			groupBoxes: groupBoxes,
 			statusBar: status
 		}
-
-		g.show()
-		moveWindowToPos(g, this.config.position)
-		windowRelativePos := getWindowClientPos(g)
-		windowRelativePos.x := windowRelativePos.y := 0
-		for i, tilePos in this.computeTilePositions_(windowRelativePos) {
-			g.addGroupBox(tilePos.toGuiOpt(), this.tiles[i].name)
-		}
-	}
-
-	computeTilePositions_(pos) {
-		if (this.config.horizontal) {
-			; +-------+--------------+    y
-			; |       |              |
-			; +-------+--------------+   y+h
-			; x      x+s            x+w
-			splitValue := this.config.defaultSplitPercentage.applyTo(pos.w)
-			results := [ ;
-				Position(pos.x, pos.y, splitValue, pos.h), ;
-				Position(pos.x + splitValue, pos.y, pos.w - splitValue, pos.h)]
-		} else {
-			; +-------+  y
-			; |       |
-			; |       |
-			; +-------+ y+s
-			; |       |
-			; +-------+ y+h
-			; x      x+w
-			splitValue := this.config.defaultSplitPercentage.applyTo(pos.h)
-			results := [ ;
-				Position(pos.x, pos.y, pos.w, splitValue), ;
-				Position(pos.x, pos.y + splitValue, pos.w, pos.h - splitValue)]
-		}
-		printDebugF("computeTilePositions_({}) == {}", () => [pos, dump(results)])
-		return results
-	}
-
-	moveSplit(tileIndex := 0) {
-		this.splitValue := tileIndex == 1 ? max(this.splitValue - this.config.splitStepSize, this.config.minSplitValue) :
-			tileIndex == 2 ? min(this.splitValue + this.config.splitStepSize, this.config.maxSplitValue) :
-			this.config.defaultSplitPercentage
-		;tilePositions := this.computeTilePositions_()
-		;this.tiles[1].setPosition(tilePositions[1])
-		;this.tiles[2].setPosition(tilePositions[2])
-		; TODO redraw
+		this.onMoveSplit_()
 	}
 
 	resetSplit() {
 		return this.moveSplit()
 	}
 
+	moveSplit(tileIndex := 0) {
+		if (tileIndex == 0) {
+			this.targetSplitPosition.reset()
+			this.gui.splitPosition.reset()
+		} else if (tileIndex == 1 || tileIndex == 2) {
+			inc := tileIndex == 1 ? -1 : 1
+			this.targetSplitPosition.increment(inc)
+			this.gui.splitPosition.increment(inc)
+		} else {
+			throw ValueError("tile index " tileIndex)
+		}
+		this.onMoveSplit_()
+	}
+
+	onMoveSplit_() {
+		if (!this.gui) {
+			return
+		}
+		for i, gbp in this.gui.splitPosition.getChildPositions() {
+			controlMove(gbp.x, gbp.y, gbp.w, gbp.h, this.gui.groupBoxes[i])
+		}
+	}
+
 	moveWindowToTileIndex(windowId, i) {
-		pos := this.computeTilePositions_(this.config.position)[i]
+		pos := this.targetSplitPosition.getChildPositions()[i]
 		return moveWindowToPos(windowId, pos)
 	}
 }

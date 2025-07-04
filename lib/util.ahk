@@ -164,6 +164,84 @@ parseTileParameter(cmdString, &i, &cmdStrPart) {
 	return false
 }
 
+class Position {
+	__new(x, y, w, h) {
+		this.x := x
+		this.y := y
+		this.w := w
+		this.h := h
+	}
+
+	toString() {
+		return format('{}({}, {}, {}x{})', type(this), this.x, this.y, this.w, this.h)
+	}
+}
+
+class SplitPosition {
+	__new(horizontal, pos, defaultSplitPercentage, minSplitPercentage, maxSplitPercentage, stepPercentage) {
+		this.horizontal := horizontal
+		this.position := pos
+		this.defaultSplitPercentage := defaultSplitPercentage
+		this.minSplitPercentage := minSplitPercentage
+		this.maxSplitPercentage := maxSplitPercentage
+		this.stepPercentage := stepPercentage
+		this.splitPercentage := defaultSplitPercentage
+	}
+
+	toString() {
+		return format('{}({}, {}{}(def:{}), {}..{}s{})', type(this),
+			String(this.position),
+			this.horizontal ? "h" : "v", String(this.splitPercentage), String(this.defaultSplitPercentage),
+			String(this.minSplitPercentage), String(this.maxSplitPercentage), String(this.stepPercentage))
+	}
+
+	reset() {
+		this.splitPercentage := this.defaultSplitPercentage
+	}
+
+	decrement() {
+		return this.increment(-1)
+	}
+
+	increment(stepCount := 1) {
+		this.splitPercentage := this.splitPercentage.addPercentage(this.stepPercentage, stepCount)
+		if (this.splitPercentage.lessThan(this.minSplitPercentage)) {
+			this.splitPercentage := this.minSplitPercentage
+		}
+		if (this.splitPercentage.greaterThan(this.maxSplitPercentage)) {
+			this.splitPercentage := this.maxSplitPercentage
+		}
+	}
+
+	getChildPositions() {
+		pos := this.position
+		if (this.horizontal) {
+			; +-------+--------------+    y
+			; |       |              |
+			; +-------+--------------+   y+h
+			; x      x+s            x+w
+			splitValue := round(this.splitPercentage.applyTo(pos.w))
+			results := [ ;
+				Position(pos.x, pos.y, splitValue, pos.h), ;
+				Position(pos.x + splitValue, pos.y, pos.w - splitValue, pos.h)]
+		} else {
+			; +-------+  y
+			; |       |
+			; |       |
+			; +-------+ y+s
+			; |       |
+			; +-------+ y+h
+			; x      x+w
+			splitValue := round(this.splitPercentage.applyTo(pos.h))
+			results := [ ;
+				Position(pos.x, pos.y, pos.w, splitValue), ;
+				Position(pos.x, pos.y + splitValue, pos.w, pos.h - splitValue)]
+		}
+		printDebugF("getChildPositions() == {}", () => [dump(results)])
+		return results
+	}
+}
+
 ; Represents a percentage. But in order to be pixel accurate when parsed from an absolute value,
 ; it stores the given value and reference (max) value.
 class Percentage {
@@ -195,8 +273,33 @@ class Percentage {
 		return Percentage(value, max)
 	}
 
+	toString() {
+		return round(100 * this.value / this.max) '%'
+	}
+
+	factor() {
+		return this.value / this.max
+	}
+
 	applyTo(value) {
 		return this.value == this.max ? value : (value * this.value / this.max)
+	}
+
+	lessThan(otherPercentage) {
+		return this.max == otherPercentage.max ? this.value < otherPercentage.value
+			: this.factor() < otherPercentage.factor()
+	}
+	greaterThan(otherPercentage) {
+		return otherPercentage.lessThan(this)
+	}
+
+	; Returns a new Percentage with <multiplier> times <otherPercentage> added.
+	; <otherPercentage> must have the same max as this.
+	addPercentage(otherPercentage, multiplier) {
+		if (otherPercentage.max != this.max) {
+			throw ValueError('different max values not supported')
+		}
+		return Percentage(this.value + otherPercentage.value, this.max)
 	}
 }
 
@@ -217,7 +320,11 @@ moveWindowToPos(windowId, pos) {
 		return winMove(pos.x, pos.y, pos.w, pos.h, windowId)
 	} catch Error as e {
 		; TODO This should not need to know such GUI internals
-		gl.screensManager.screenWithInput.gui.statusBar.setText('ERROR moving window: ' e.message)
+		if (gl.screensManager.screenWithInput.gui) {
+			gl.screensManager.screenWithInput.gui.statusBar.setText('ERROR moving window: ' e.message)
+		} else {
+			throw e
+		}
 	}
 }
 

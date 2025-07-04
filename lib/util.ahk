@@ -350,7 +350,7 @@ winSetMinMax(windowId, value) {
 }
 
 getNormalWindowIds() {
-	printDebugF('my window ids: {}', () => arrayMap(gl.screensManager.screens, s => s.gui.hwnd))
+	printDebugF('my window ids: {}', () => arrayMap(gl.screensManager.screens, s => s.gui.gui.hwnd))
 	results := []
 	for wid_ in winGetList() {
 		wid := wid_ ; workaround for Autohotkey bug? Loop variable does not exist in the printDebugF closure, but this copy does.

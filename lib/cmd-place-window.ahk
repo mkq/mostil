@@ -73,8 +73,9 @@ class PlaceWindowCommand extends Command {
 	executePreview() {
 		if (this.windowSpec.criteria) {
 			this.windowId := winExist(this.windowSpec.criteria)
+			printDebug('window for {}: {}', this.windowSpec.criteria, this.windowId)
 		} else { ; MRU mode
-			myWindowIds := arrayMap(gl.guiManager.screenGuiManagers, gm => gm.gui.hwnd)
+			myWindowIds := arrayMap(gl.screensManager.screens, s => s.gui.gui.hwnd)
 			this.windowId := 0
 			for wid in getNormalWindowIds() {
 				if (arrayIndexOf(myWindowIds, wid) == 0) {
@@ -82,6 +83,7 @@ class PlaceWindowCommand extends Command {
 					break
 				}
 			}
+			printDebug('MRU window: {}', this.windowId)
 		}
 
 		this.launchPending := !this.windowId

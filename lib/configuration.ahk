@@ -72,7 +72,7 @@ class Configuration extends Object {
 			requireInteger(rawConfig.y, "screen y"),
 			requireInteger(rawConfig.w, "screen w"),
 			requireInteger(rawConfig.h, "screen h"))
-		if (type(rawConfig.split) !== "String") {
+		if !(rawConfig.split is String) {
 			throw ValueError("invalid screen split mode type " type(rawConfig.split))
 		}
 		splitMatcher := ""
@@ -95,8 +95,8 @@ class Configuration extends Object {
 			throw ValueError("invalid screen snap (must be an array of two integers betwees 0 and 100, first + grid < second)")
 		}
 
-		if (type(rawConfig.inputs) == "Array" && rawConfig.inputs.length == 2
-			&& type(rawConfig.inputs[1]) == "String" && type(rawConfig.inputs[2]) == "String") {
+		if (rawConfig.inputs is Array && rawConfig.inputs.length == 2
+			&& rawConfig.inputs[1] is String && rawConfig.inputs[2] is String) {
 			t1input := rawConfig.inputs[1]
 			t2input := rawConfig.inputs[2]
 			if (t1input == t2input) {

@@ -45,7 +45,7 @@ class CommandParseResult {
 ; An area split vertically or horizontally, thereby consisting of two Tiles.
 class Screen {
 	__new(name, targetSplitPosition, guiPosition, withInput, tiles) {
-		if (type(tiles) !== "Array" || tiles.length !== 2) {
+		if !(tiles is Array && tiles.length == 2) {
 			throw ValueError("tiles is not an array of length 2")
 		}
 		this.name := name

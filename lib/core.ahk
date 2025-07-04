@@ -275,6 +275,9 @@ class Icon {
 
 class ScreensManager {
 	__new(screens) {
+		if (screens.length < 1) {
+			throw ValueError("no screens")
+		}
 		this.screenWithInput := false
 		for s in screens {
 			if (s.hasInput()) {
@@ -284,10 +287,6 @@ class ScreensManager {
 					this.screenWithInput := s
 				}
 			}
-		}
-		if (!this.screenWithInput) {
-			this.screenWithInput := screens[0]
-			printDebugF("choosing input GUI: {}", this.screenWithInput)
 		}
 		this.screens := screens
 	}

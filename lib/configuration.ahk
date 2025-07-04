@@ -37,10 +37,18 @@ class Configuration extends Object {
 		return parsers
 	}
 
-	static parseScreensConfig_(rawConfigs) {
+	static parseScreensConfig_(rawConfigs, addInput := false) {
 		screens := []
 		tileInputs := []
 		for screenName, screenRawConfig in rawConfigs.ownProps() {
+			if (addInput) {
+				addInput := false
+				printDebug("choosing input GUI: {}", screenName)
+				if (!screenRawConfig.hasProp("ui")) {
+					screenRawConfig.ui := {}
+				}
+				screenRawConfig.ui.input := true
+			}
 			s := Configuration.parseScreenConfig_(screenName, screenRawConfig)
 			screens.push(s)
 			for t in s.tiles {
@@ -50,10 +58,12 @@ class Configuration extends Object {
 				tileInputs.push(t.input)
 			}
 		}
-		if (screens.length == 0) {
-			throw ValueError("no screens configured")
+		sm := ScreensManager(screens)
+		if (!sm.screenWithInput) {
+			return Configuration.parseScreensConfig_(rawConfigs, true)
 		}
-		return ScreensManager(screens)
+
+		return sm
 	}
 
 	static parseScreenConfig_(name, rawConfig) {

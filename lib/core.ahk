@@ -85,8 +85,8 @@ class Screen {
 
 		g.show()
 		moveWindowToPos(g, this.guiPosition)
-		windowRelativePos := getWindowClientPos(g)
-		windowRelativePos.x := windowRelativePos.y := 0
+		windowClientPos := getWindowClientPos(g)
+		windowRelativePos := Position(0, 0, windowClientPos.w, windowClientPos.h)
 		splitPos := SplitPosition(this.targetSplitPosition.horizontal,
 			windowRelativePos,
 			this.targetSplitPosition.defaultSplitPercentage,
@@ -102,12 +102,13 @@ class Screen {
 		status := false
 		if (this.hasInput()) {
 			g.onEvent("Close", (*) => exitApp())
-			; TODO center input and buttons
-			input := g.addComboBox("w280 vCmd", [])
+			buttonW := 50
+			inputW := min(500, windowClientPos.w)
+			input := g.addComboBox(format('w{} x{} y{} vCmd', inputW, (windowClientPos.w - inputW) / 2 - buttonW, windowClientPos.h / 2 - 20, []))
 			input.focus()
 			input.onEvent("Change", onValueChange)
-			okButton := g.addButton("Default w60 x+0", "OK")
-			cancelButton := g.addButton("w60 x+0", "Cancel")
+			okButton := g.addButton(format('Default w{} x+0', buttonW), "OK")
+			cancelButton := g.addButton(format('w{} x+0', buttonW), "Cancel")
 			okButton.onEvent("Click", (*) => submit())
 			cancelButton.onEvent("Click", (*) => cancel('Button'))
 			status := g.addStatusBar()

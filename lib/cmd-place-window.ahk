@@ -61,7 +61,6 @@ class PlaceWindowCommand extends Command {
 		}
 		this.defaultPreviewIcon := defaultPreviewIcon
 		this.windowId := 0
-		this.launchPending := false
 		this.oldTileText := selectedTile ? selectedTile.text : false
 		this.oldTileIcon := selectedTile ? selectedTile.icon.internalFormat : false
 	}
@@ -86,8 +85,7 @@ class PlaceWindowCommand extends Command {
 			printDebug('MRU window: {}', this.windowId)
 		}
 
-		this.launchPending := !this.windowId
-		if (this.launchPending) { ; selected window does not exist
+		if (!this.windowId) { ; selected window does not exist
 			if (!this.selectedTile) { ; no tile, i.e. focus-only mode, but selected window does not exist: do nothing
 				return
 			}
@@ -108,9 +106,7 @@ class PlaceWindowCommand extends Command {
 			this.selectedTile.icon.internalFormat := this.oldTileIcon
 		}
 
-		if (this.launchPending) {
-			this.launchPending := false
-
+		if (!this.windowId) {
 			printDebug('run: {}', this.windowSpec.launchCommand)
 			run(this.windowSpec.launchCommand)
 			printDebug('waiting for window {}', this.windowSpec.criteria)
@@ -131,7 +127,6 @@ class PlaceWindowCommand extends Command {
 	}
 
 	undo() {
-		this.launchPending := false
 		if (this.selectedTile) {
 			this.selectedTile.text := this.oldTileText
 			this.selectedTile.icon.internalFormat := this.oldTileIcon

@@ -85,7 +85,7 @@ class Screen {
 
 		g.show()
 		moveWindowToPos(g, this.guiPosition)
-		windowClientPos := getWindowClientPos(g)
+		windowClientPos := Position.ofWindowClient(g)
 		windowRelativePos := Position(0, 0, windowClientPos.w, windowClientPos.h)
 		splitPos := SplitPosition(this.targetSplitPosition.horizontal,
 			windowRelativePos,
@@ -97,6 +97,7 @@ class Screen {
 		for i, tilePos in splitPos.getChildPositions() {
 			groupBoxes.push(g.addGroupBox(, this.tiles[i].name))
 		}
+		Screen.setGroupBoxSizes_(groupBoxes, splitPos)
 
 		input := false
 		status := false
@@ -116,14 +117,21 @@ class Screen {
 		g.onEvent("Close", (*) => cancel('window closed'))
 		g.onEvent("Escape", (*) => cancel('escape'))
 
+		dummyIconFile := 'shell32.dll'
+		pics := arrayMap(this.tiles, t => g.addPicture(
+			Position.ofGuiControl(groupBoxes[t.index]).center(1 / 3).toGuiOption(), dummyIconFile))
+		icons := arrayMap(pics, p => Icon(p))
+		arrayMap(icons, i => i.updatePicture()) ; clear dummyIconFile from picture
+
 		this.gui := {
 			splitPosition: splitPos,
 			gui: g,
 			input: input,
+			pictures: pics,
 			groupBoxes: groupBoxes,
 			statusBar: status
 		}
-		this.onMoveSplit_()
+		this.icons := icons
 	}
 
 	resetSplit() {
@@ -141,15 +149,12 @@ class Screen {
 		} else {
 			throw ValueError("tile index " tileIndex)
 		}
-		this.onMoveSplit_()
+		Screen.setGroupBoxSizes_(this.gui.groupBoxes, this.gui.splitPosition)
 	}
 
-	onMoveSplit_() {
-		if (!this.gui) {
-			return
-		}
-		for i, gbp in this.gui.splitPosition.getChildPositions() {
-			controlMove(gbp.x, gbp.y, gbp.w, gbp.h, this.gui.groupBoxes[i])
+	static setGroupBoxSizes_(groupBoxes, splitPosition) {
+		for i, gbp in splitPosition.getChildPositions() {
+			controlMove(gbp.x, gbp.y, gbp.w, gbp.h, groupBoxes[i])
 		}
 	}
 
@@ -171,7 +176,6 @@ class Tile {
 		this.input := input
 		this.screen := false
 		this.windowIds := []
-		this.icon_ := Icon()
 		this.text_ := ""
 	}
 
@@ -188,7 +192,7 @@ class Tile {
 	; a preview of its action. However, this is implemented as an always present Icon instance
 	; which can also (and initially does) represent a null Icon:
 	icon {
-		get => this.icon_
+		get => this.screen.icons[this.index]
 	}
 
 	; Moves the parent screen's split in the direction corresponding to this tile, making this tile smaller and the sibling
@@ -218,10 +222,12 @@ class Tile {
 	}
 }
 
+; an icon which draws itself to a given Picture control
 class Icon {
-	__new() {
+	__new(pic) {
+		this.picture := pic
 		this.file := ""
-		this.index := 0
+		this.index := 1
 		this.handle := 0
 	}
 
@@ -238,15 +244,31 @@ class Icon {
 			this.file := getProp(value, "file", "")
 			this.index := getProp(value, "index", 1)
 			this.handle := getProp(value, "handle", 0)
+			this.updatePicture()
+		}
+	}
+
+	updatePicture() {
+		if (this.handle) {
+			printDebug('updatePicture: handle {}', this.handle)
+			this.picture.value := this.handle
+		} else if (this.file != '') {
+			printDebug('updatePicture: file {}, index {}', this.file, this.index)
+			this.picture.value := format('*icon{} {}', this.index, this.file)
+		} else {
+			printDebug('updatePicture: hide')
+			this.picture.visible := false
 		}
 	}
 
 	setToFile(file, index := 1) {
 		this.internalFormat := { file: file, index: index }
+		this.updatePicture()
 	}
 
 	setToHandle(hIcon) {
 		this.internalFormat := { handle: hIcon }
+		this.updatePicture()
 	}
 }
 

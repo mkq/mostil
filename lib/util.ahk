@@ -172,8 +172,36 @@ class Position {
 		this.h := h
 	}
 
+	static ofWindow(windowId) {
+		x := y := w := h := ""
+		winGetPos(&x, &y, &w, &h, windowId)
+		return Position(x, y, w, h)
+	}
+
+	static ofWindowClient(windowId) {
+		x := y := w := h := ""
+		winGetClientPos(&x, &y, &w, &h, windowId)
+		return Position(x, y, w, h)
+	}
+
+	static ofGuiControl(gc) {
+		x := y := w := h := ""
+		gc.getPos(&x, &y, &w, &h)
+		return Position(x, y, w, h)
+	}
+
 	toString() {
 		return format('{}({}, {}, {}x{})', type(this), this.x, this.y, this.w, this.h)
+	}
+
+	toGuiOption() {
+		return format('x{} y{} w{} h{}', this.x, this.y, this.w, this.h)
+	}
+
+	center(ratio) {
+		w := this.w * ratio
+		h := this.h * ratio
+		return Position(this.x + (this.w - w) / 2, this.y + (this.h - h) / 2, w, h)
 	}
 }
 
@@ -310,18 +338,6 @@ class Percentage {
 	}
 }
 
-getWindowPos(windowId) {
-	x := y := w := h := ""
-	winGetPos(&x, &y, &w, &h, windowId)
-	return Position(x, y, w, h)
-}
-
-getWindowClientPos(windowId) {
-	x := y := w := h := ""
-	winGetClientPos(&x, &y, &w, &h, windowId)
-	return Position(x, y, w, h)
-}
-
 moveWindowToPos(windowId, pos) {
 	try {
 		return winMove(pos.x, pos.y, pos.w, pos.h, windowId)
@@ -365,6 +381,10 @@ getNormalWindowIds() {
 	return results
 }
 
+; TODO always returns 0
 getWindowIcon(windowId) {
-	return sendMessage(0x7F, 1, , windowId) ; 0x7F = WM_GETICON, wParam 1 = large, lParam = DPI
+	h := sendMessage(0x7F, 1, 0, windowId) ; 0x7F = WM_GETICON, wParam 0 = small / 1 = large, lParam = DPI
+	h := h || sendMessage(0x7F, 0, 0, windowId)
+	printDebug('getWindowIcon({}) == {}', windowId, h)
+	return h
 }

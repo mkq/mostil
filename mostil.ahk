@@ -21,6 +21,7 @@ setTitleMatchMode("RegEx")
 ; - Add configurable command separator char? That would e.g. enable multiple focus commands even if a placeWindow input starts
 ;   with a char equal to a tile.
 ; - If any own window is activated, activate the one with input instead.
+; - ResizeSplitCommand: Update a tile's window position only if it is still roughly (configurable) at tile position.
 ; - new command to close a window
 ; - new command to activate previously active window; example command strings if this is bound to "^":
 ;   - "en^" => select window "e", move it to tile "n", focus back.

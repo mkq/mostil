@@ -110,18 +110,20 @@ class Screen {
 			input.onEvent("Change", onValueChange)
 			okButton := g.addButton(format('Default w{} x+0', buttonW), "OK")
 			cancelButton := g.addButton(format('w{} x+0', buttonW), "Cancel")
+			reloadButton := g.addButton(format('w{} x+0', buttonW), "&Reload")
 			okButton.onEvent("Click", (*) => submit())
 			cancelButton.onEvent("Click", (*) => cancel('Button'))
+			reloadButton.onEvent("Click", (*) => reload()) ; TODO remove
 			status := g.addStatusBar()
 		}
 		g.onEvent("Close", (*) => cancel('window closed'))
 		g.onEvent("Escape", (*) => cancel('escape'))
 
-		dummyIconFile := 'shell32.dll'
-		pics := arrayMap(this.tiles, t => g.addPicture(
-			Position.ofGuiControl(groupBoxes[t.index]).center(1 / 3).toGuiOption(), dummyIconFile))
+		pics := arrayMap(this.tiles, t => g.addPicture(Screen.iconPos_(groupBoxes[t.index]).toGuiOption(), A_AHKPATH))
 		icons := arrayMap(pics, p => Icon(p))
-		arrayMap(icons, i => i.updatePicture()) ; clear dummyIconFile from picture
+		arrayMap(icons, i => i.updatePicture()) ; clear dummy icon from picture
+
+		; TODO add tile texts
 
 		this.gui := {
 			splitPosition: splitPos,
@@ -139,6 +141,7 @@ class Screen {
 	}
 
 	moveSplit(tileIndex := 0) {
+		oldPos := this.gui.splitPosition.splitPercentage
 		if (tileIndex == 0) {
 			this.targetSplitPosition.reset()
 			this.gui.splitPosition.reset()
@@ -150,6 +153,17 @@ class Screen {
 			throw ValueError("tile index " tileIndex)
 		}
 		Screen.setGroupBoxSizes_(this.gui.groupBoxes, this.gui.splitPosition)
+		diffPos := this.gui.splitPosition.splitPercentage.addPercentage(oldPos, -1)
+		for i, p in this.gui.pictures {
+			gb := this.gui.groupBoxes[i]
+			moveWindowToPos(p, Screen.iconPos_(gb))
+			gb.redraw()
+			; TODO move tile texts
+		}
+	}
+
+	static iconPos_(gb) {
+		return Position.ofGuiControl(gb).center(1 / 12)
 	}
 
 	static setGroupBoxSizes_(groupBoxes, splitPosition) {
@@ -175,7 +189,7 @@ class Tile {
 		this.name := name
 		this.input := input
 		this.screen := false
-		this.windowIds := []
+		this.windowIds := Map() ; a set of window IDs represented as Map windowId -> true
 		this.text_ := ""
 	}
 
@@ -205,20 +219,31 @@ class Tile {
 	; Also deletes remembered window IDs which no longer exist.
 	setPosition(windowPos) {
 		this.pos := windowPos
-		newWindowIds := []
 		for (wid in this.windowIds) {
 			if (winExist(wid)) {
-				newWindowIds.push(wid)
 				moveWindowToPos(wid, windowPos)
+			} else {
+				this.windowIds.delete(wid)
 			}
 		}
-		this.windowIds := newWindowIds
 	}
 
-	grabWindow(windowId) {
-		if (this.screen.moveWindowToTileIndex(windowId, this.index)) {
-			this.windowIds.push(windowId)
+	containsWindow(windowId) {
+		return this.windowIds.has(windowId)
+	}
+
+	addWindow(windowId) {
+		if (this.containsWindow(windowId)) {
+			return
 		}
+		if (this.screen.moveWindowToTileIndex(windowId, this.index)) {
+			gl.screensManager.forEachTile(t => t.removeWindow(windowId)) ; remove from all tiles
+			this.windowIds.set(windowId, true)
+		}
+	}
+
+	removeWindow(windowId) {
+		this.windowIds.delete(windowId)
 	}
 }
 
@@ -252,9 +277,11 @@ class Icon {
 		if (this.handle) {
 			printDebug('updatePicture: handle {}', this.handle)
 			this.picture.value := 'HICON:' this.handle
+			this.picture.visible := true
 		} else if (this.file != '') {
 			printDebug('updatePicture: file {}, index {}', this.file, this.index)
 			this.picture.value := format('*icon{} {}', this.index, this.file)
+			this.picture.visible := true
 		} else {
 			printDebug('updatePicture: hide')
 			this.picture.visible := false
@@ -311,6 +338,14 @@ class ScreensManager {
 			}
 		}
 		f(this.screenWithInput)
+	}
+
+	forEachTile(f) {
+		for s in this.screens {
+			for t in s.tiles {
+				f(t)
+			}
+		}
 	}
 
 	containsWindowId(windowId) {

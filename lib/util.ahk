@@ -4,7 +4,7 @@ printDebug(formatStr, values*) {
 	}
 	stringValues := []
 	for v in values {
-		stringValues.push(String(v))
+		stringValues.push(toString(v))
 	}
 	msg := format(formatStr "`n", stringValues*)
 	;fileAppend("DEBUG: " msg, '**')

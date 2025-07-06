@@ -87,9 +87,13 @@ class PlaceWindowCommand extends Command {
 
 		if (!this.windowId) { ; selected window does not exist
 			if (!this.selectedTile) { ; no tile, i.e. focus-only mode, but selected window does not exist: do nothing
+				printDebug('focus non-existing window => do nothing')
 				return
 			}
 			if (!this.windowSpec.launchCommand) {
+				; TODO If selected window does not exist and has no run command configured, the parser should already
+				; treat the input as invalid.
+				printDebug('non-existing, no launch command => do nothing')
 				return
 			}
 			this.oldTileText := this.selectedTile.text := this.windowSpec.launchCommand " (pending launch)"
@@ -120,10 +124,10 @@ class PlaceWindowCommand extends Command {
 			}
 		}
 
-		winActivate(this.windowId)
 		if (this.selectedTile) {
-			this.selectedTile.grabWindow(this.windowId)
+			this.selectedTile.addWindow(this.windowId)
 		}
+		winActivate(this.windowId)
 	}
 
 	undo() {

@@ -251,7 +251,7 @@ class Icon {
 	updatePicture() {
 		if (this.handle) {
 			printDebug('updatePicture: handle {}', this.handle)
-			this.picture.value := this.handle
+			this.picture.value := 'HICON:' this.handle
 		} else if (this.file != '') {
 			printDebug('updatePicture: file {}, index {}', this.file, this.index)
 			this.picture.value := format('*icon{} {}', this.index, this.file)

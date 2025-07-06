@@ -18,6 +18,22 @@ printDebugF(formatStr, valuesFunc) {
 	}
 }
 
+; Adds debug logging to a given function with a given name.
+; Especially for closures which don't have a name.
+addPrintDebugN(f, name) {
+	printDebug('addPrintDebugN(..)')
+	fWithDebugOut(args*) {
+		result := f(args*)
+		printDebug('{}({}) == {}', name, toString(args), toString(result))
+		return result
+	}
+	return fWithDebugOut
+}
+; Adds debug logging to a given function (using its name).
+addPrintDebug(f) {
+	return addPrintDebugN(f, f.name)
+}
+
 eq(a, b) {
 	return a == false ? b == false : a == b
 }
@@ -31,6 +47,14 @@ getMandatoryProp(o, propName, errorMessage := (o '.' propName ' not set')) {
 		return o.%propName%
 	}
 	throw ValueError(errorMessage)
+}
+
+toString(x) {
+	try {
+		return x is Array ? join(', ', x) : String(x)
+	} catch Error as e {
+		return format('<a {} without toString()>', type(x))
+	}
 }
 
 join(sep, a) {
@@ -381,10 +405,10 @@ getNormalWindowIds() {
 	return results
 }
 
-; TODO always returns 0
-getWindowIcon(windowId) {
-	h := sendMessage(0x7F, 1, 0, windowId) ; 0x7F = WM_GETICON, wParam 0 = small / 1 = large, lParam = DPI
-	h := h || sendMessage(0x7F, 0, 0, windowId)
-	printDebug('getWindowIcon({}) == {}', windowId, h)
-	return h
+; Actual sendMessage and GetClassLong logic and magic numbers taken from
+; https://www.autohotkey.com/board/topic/116614-iswitchw-plus-groupedahk-alttab-replacement-window-switcher/
+getWindowIcon(winId) {
+	static getIcon_sm := addPrintDebugN((winId, iconType) => sendMessage(0x7F, iconType, 0, , winId), 'getIcon_sm') ; 0x7F = WM_GETICON
+	static getIcon_gcl := addPrintDebugN((winId, arg) => dllCall("GetClassLong", "uint", winId, "int", arg), 'getIcon_gcl')
+	return getIcon_sm(winId, 1) || getIcon_sm(winId, 2) || getIcon_sm(winId, 0) || getIcon_gcl(winId, -14) || getIcon_gcl(winId, -34)
 }

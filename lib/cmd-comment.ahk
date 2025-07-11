@@ -15,6 +15,7 @@ class CommentCommandParser extends CommandParser {
 		if (charAt(cmdStr, i) !== this.startCommentChar) {
 			return super.parse(cmdStr, pendingCommandParseResults, &i, commandParseResults)
 		}
+		i++
 		depth := 1, len := strlen(cmdStr)
 		while (i <= len && depth > 0) {
 			c := charAt(cmdStr, i)

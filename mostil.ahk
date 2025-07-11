@@ -149,7 +149,7 @@ class Mostil {
 					break
 				}
 			}
-			if (prevLength == cprs.length) {
+			if (prevI == i) {
 				global submittable := false
 				msg := format("Invalid or incomplete input starting at index {}: {}", prevI - 1, substr(cmdStr, i))
 				printDebug(msg)

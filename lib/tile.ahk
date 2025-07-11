@@ -1,4 +1,3 @@
-#include %A_SCRIPTDIR%/lib/util.ahk
 #include %A_SCRIPTDIR%/lib/window-util.ahk
 
 ; One "half" of a Screen
@@ -30,17 +29,17 @@ class Tile {
 
 	; Moves the parent screen's split in the direction corresponding to this tile, making this tile smaller and the sibling
 	; tile bigger.
-	moveSplit() {
-		this.screen.moveSplit(this.index)
+	moveSplit(screensMgr) {
+		this.screen.moveSplit(screensMgr, this.index)
 	}
 
 	; Called by the parent screen to move all windows placed in this tile to the given coordinates.
 	; Also deletes remembered window IDs which no longer exist.
-	setPosition(windowPos) {
+	setPosition(windowPos, errorHandler) {
 		this.pos := windowPos
 		for (wid in this.windowIds) {
 			if (winExist(wid)) {
-				moveWindowToPos(wid, windowPos)
+				WindowUtil.moveWindowToPos(wid, windowPos, errorHandler)
 			} else {
 				this.windowIds.delete(wid)
 			}
@@ -51,12 +50,12 @@ class Tile {
 		return this.windowIds.has(windowId)
 	}
 
-	addWindow(windowId) {
+	addWindow(windowId, screensManager, errorHandler) {
 		if (this.containsWindow(windowId)) {
 			return
 		}
-		if (this.screen.moveWindowToTileIndex(windowId, this.index)) {
-			gl.screensManager.forEachTile(t => t.removeWindow(windowId)) ; remove from all tiles
+		if (this.screen.moveWindowToTileIndex(windowId, this.index, errorHandler)) {
+			screensManager.forEachTile(t => t.removeWindow(windowId)) ; remove from all tiles
 			this.windowIds.set(windowId, true)
 		}
 	}

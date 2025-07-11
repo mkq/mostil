@@ -1,5 +1,3 @@
-#include %A_ScriptDir%/lib/util.ahk
-
 class CommandParser {
 	; @param cmdStr command string to parse
 	; @param pendingCommandParseResults array of pending CommandParseResults; TODO remove (see PlaceWindowCommandParser)
@@ -18,16 +16,16 @@ class Command {
 
 	; Executes this command, but only so far that it can be undone.
 	; Other actions are deferred until submit().
-	executePreview() {
+	executePreview(errorHandler) {
 		throw Error("must be overridden")
 	}
 
 	; Called when the input that produced this command is deleted before it has been submitted.
-	undo() {
+	undo(errorHandler) {
 		throw Error("must be overridden")
 	}
 
-	submit() {
+	submit(errorHandler) {
 	}
 }
 

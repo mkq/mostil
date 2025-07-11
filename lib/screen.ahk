@@ -40,14 +40,14 @@ class Screen {
 	}
 
 	initGui_(app) {
-		printDebug("init GUI for screen {}", this.toString())
+		Mostil.Util.printDebug("init GUI for screen {}", this.toString())
 		g := Gui("+Theme", format('{} - screen "{}"', Mostil.LONG_PROGRAM_NAME, this.name))
 
 		g.show()
-		moveWindowToPos(g, this.guiPosition)
-		windowClientPos := Position.ofWindowClient(g)
-		windowRelativePos := Position(0, 0, windowClientPos.w, windowClientPos.h)
-		splitPos := SplitPosition(this.targetSplitPosition.horizontal,
+		Mostil.WindowUtil.moveWindowToPos(g, this.guiPosition, app.errorHandler)
+		windowClientPos := Mostil.Position.ofWindowClient(g)
+		windowRelativePos := Mostil.Position(0, 0, windowClientPos.w, windowClientPos.h)
+		splitPos := Mostil.SplitPosition(this.targetSplitPosition.horizontal,
 			windowRelativePos,
 			this.targetSplitPosition.defaultSplitPercentage,
 			this.targetSplitPosition.minSplitPercentage,
@@ -57,7 +57,7 @@ class Screen {
 		for i, tilePos in splitPos.getChildPositions() {
 			groupBoxes.push(g.addGroupBox(, this.tiles[i].name))
 		}
-		Screen.setGroupBoxSizes_(groupBoxes, splitPos)
+		Mostil.Screen.setGroupBoxSizes_(groupBoxes, splitPos)
 
 		input := false
 		status := false
@@ -79,9 +79,9 @@ class Screen {
 		g.onEvent("Close", (*) => app.cancel('window closed'))
 		g.onEvent("Escape", (*) => app.cancel('escape'))
 
-		pics := arrayMap(this.tiles, t => g.addPicture(Screen.iconPos_(groupBoxes[t.index]).toGuiOption(), A_AHKPATH))
-		icons := arrayMap(pics, p => Icon(p))
-		arrayMap(icons, i => i.updatePicture()) ; clear dummy icon from picture
+		pics := Mostil.Util.arrayMap(this.tiles, t => g.addPicture(Mostil.Screen.iconPos_(groupBoxes[t.index]).toGuiOption(), A_AHKPATH))
+		icons := Mostil.Util.arrayMap(pics, p => Mostil.Icon(p))
+		Mostil.Util.arrayMap(icons, i => i.updatePicture()) ; clear dummy icon from picture
 
 		; TODO add tile texts
 
@@ -96,11 +96,11 @@ class Screen {
 		this.icons := icons
 	}
 
-	resetSplit() {
-		return this.moveSplit()
+	resetSplit(errorHandler) {
+		return this.moveSplit(errorHandler)
 	}
 
-	moveSplit(tileIndex := 0) {
+	moveSplit(errorHandler, tileIndex := 0) {
 		oldPos := this.gui.splitPosition.splitPercentage
 		if (tileIndex == 0) {
 			this.targetSplitPosition.reset()
@@ -112,11 +112,11 @@ class Screen {
 		} else {
 			throw ValueError("tile index " tileIndex)
 		}
-		Screen.setGroupBoxSizes_(this.gui.groupBoxes, this.gui.splitPosition)
+		Mostil.Screen.setGroupBoxSizes_(this.gui.groupBoxes, this.gui.splitPosition)
 		diffPos := this.gui.splitPosition.splitPercentage.addPercentage(oldPos, -1)
 		for i, p in this.gui.pictures {
 			gb := this.gui.groupBoxes[i]
-			moveWindowToPos(p, Screen.iconPos_(gb))
+			Mostil.WindowUtil.moveWindowToPos(p, Mostil.Screen.iconPos_(gb), errorHandler)
 			gb.redraw()
 			; TODO move tile texts
 		}
@@ -124,7 +124,7 @@ class Screen {
 
 	static iconPos_(gb) {
 		; TODO make icons square and limit size
-		return Position.ofGuiControl(gb).center(1 / 12)
+		return Mostil.Position.ofGuiControl(gb).center(1 / 12)
 	}
 
 	static setGroupBoxSizes_(groupBoxes, splitPosition) {
@@ -133,9 +133,9 @@ class Screen {
 		}
 	}
 
-	moveWindowToTileIndex(windowId, i) {
+	moveWindowToTileIndex(windowId, i, errorHandler) {
 		pos := this.targetSplitPosition.getChildPositions()[i]
-		return moveWindowToPos(windowId, pos)
+		return Mostil.WindowUtil.moveWindowToPos(windowId, pos, errorHandler)
 	}
 
 	updateWindowPositions() {

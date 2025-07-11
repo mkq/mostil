@@ -1,195 +1,198 @@
 #include %A_ScriptDir%/lib/util.ahk
 
-printDebug(formatStr, values*) {
-	if (!DEBUG_OUTPUT) {
-		return
-	}
-	stringValues := []
-	for v in values {
-		stringValues.push(toString(v))
-	}
-	msg := format(formatStr "`n", stringValues*)
-	;fileAppend("DEBUG: " msg, '**')
-	outputDebug(msg)
-}
+class Util {
+	static DEBUG_OUTPUT := true
 
-; printDebug with function for lazy evaluation:
-printDebugF(formatStr, valuesFunc) {
-	if (DEBUG_OUTPUT) {
-		return printDebug(formatStr, valuesFunc.call()*)
+	static printDebug(formatStr, values*) {
+		if (!Mostil.Util.DEBUG_OUTPUT) {
+			return
+		}
+		stringValues := []
+		for v in values {
+			stringValues.push(Mostil.Util.toString(v))
+		}
+		msg := format(formatStr "`n", stringValues*)
+		;fileAppend("DEBUG: " msg, '**')
+		outputDebug(msg)
 	}
-}
 
-; Adds debug logging to a given function with a given name.
-; Especially for closures which don't have a name.
-addPrintDebugN(f, name) {
-	printDebug('addPrintDebugN(..)')
-	fWithDebugOut(args*) {
-		result := f(args*)
-		printDebug('{}({}) == {}', name, toString(args), toString(result))
+	; printDebug with function for lazy evaluation:
+	static printDebugF(formatStr, valuesFunc) {
+		if (Mostil.Util.DEBUG_OUTPUT) {
+			return Mostil.Util.printDebug(formatStr, valuesFunc.call()*)
+		}
+	}
+
+	; Adds debug logging to a given function with a given name.
+	; Especially for closures which don't have a name.
+	static addPrintDebugN(f, name) {
+		Mostil.Util.printDebug('addPrintDebugN(..)')
+		fWithDebugOut(args*) {
+			result := f(args*)
+			Mostil.Util.printDebug('{}({}) == {}', name, Mostil.Util.toString(args), Mostil.Util.toString(result))
+			return result
+		}
+		return fWithDebugOut
+	}
+	; Adds debug logging to a given function (using its name).
+	static addPrintDebug(f) {
+		return Mostil.Util.addPrintDebugN(f, f.name)
+	}
+
+	static eq(a, b) {
+		return a == false ? b == false : a == b
+	}
+
+	static getProp(o, propName, defaultValue := false) {
+		return o.hasProp(propName) ? o.%propName% : defaultValue
+	}
+
+	static getMandatoryProp(o, propName, errorMessage := (o '.' propName ' not set')) {
+		if (o.hasProp(propName)) {
+			return o.%propName%
+		}
+		throw ValueError(errorMessage)
+	}
+
+	static toString(x) {
+		try {
+			return x is Array ? Mostil.Util.join(', ', x) : String(x)
+		} catch Error as e {
+			return format('<a {} without toString()>', type(x))
+		}
+	}
+
+	static join(sep, a) {
+		start := true
+		result := ""
+		for (elem in a) {
+			if (start) {
+				start := false
+			} else {
+				result .= sep
+			}
+			result .= String(elem)
+		}
 		return result
 	}
-	return fWithDebugOut
-}
-; Adds debug logging to a given function (using its name).
-addPrintDebug(f) {
-	return addPrintDebugN(f, f.name)
-}
 
-eq(a, b) {
-	return a == false ? b == false : a == b
-}
-
-getProp(o, propName, defaultValue := false) {
-	return o.hasProp(propName) ? o.%propName% : defaultValue
-}
-
-getMandatoryProp(o, propName, errorMessage := (o '.' propName ' not set')) {
-	if (o.hasProp(propName)) {
-		return o.%propName%
-	}
-	throw ValueError(errorMessage)
-}
-
-toString(x) {
-	try {
-		return x is Array ? join(', ', x) : String(x)
-	} catch Error as e {
-		return format('<a {} without toString()>', type(x))
-	}
-}
-
-join(sep, a) {
-	start := true
-	result := ""
-	for (elem in a) {
-		if (start) {
-			start := false
-		} else {
-			result .= sep
-		}
-		result .= String(elem)
-	}
-	return result
-}
-
-dump(o) {
-	switch type(o) {
-		case "Array":
-			parts := []
-			for (elem in o) {
-				parts.push(dump(elem))
-			}
-			return "[" join(", ", parts) "]"
-		case "Object":
-			result := "{ "
-			start := true
-			for n, v in o.ownProps() {
-				if (start) {
-					start := false
-				} else {
-					result .= ", "
+	static dump(o) {
+		switch type(o) {
+			case "Array":
+				parts := []
+				for (elem in o) {
+					parts.push(Mostil.Util.dump(elem))
 				}
-				result .= n ": " dump(v)
-			}
-			result .= " }"
-			return result
-		default:
-			return String(o)
+				return "[" Mostil.Util.join(", ", parts) "]"
+			case "Object":
+				result := "{ "
+				start := true
+				for n, v in o.ownProps() {
+					if (start) {
+						start := false
+					} else {
+						result .= ", "
+					}
+					result .= n ": " Mostil.Util.dump(v)
+				}
+				result .= " }"
+				return result
+			default:
+				return String(o)
+		}
 	}
-}
 
-arrayIndexOf(array, elem, startIndex := 1) {
-	i := startIndex
-	while (i <= array.length) {
-		if (array[i] == elem) {
+	static arrayIndexOf(array, elem, startIndex := 1) {
+		i := startIndex
+		while (i <= array.length) {
+			if (array[i] == elem) {
+				return i
+			}
+			i++
+		}
+		return 0
+	}
+
+	static arrayMap(array, f) {
+		withIndex := f.maxParams > 1
+		results := []
+		for i, elem in array {
+			result := withIndex ? f(i, elem) : f(elem)
+			results.push(result)
+		}
+		return results
+	}
+
+	static charAt(str, index) {
+		return substr(str, index, 1)
+	}
+
+	static skip(str, prefix, &i) {
+		pl := strlen(prefix)
+		matches := substr(str, i, pl) == prefix
+		if (matches) {
+			i += pl
+		}
+		return matches
+	}
+
+	static requireInteger(val, valueDescription := "value") {
+		if (!isInteger(val)) {
+			throw ValueError(valueDescription " is not an integer")
+		}
+		return Integer(val)
+	}
+
+	static requireNumber(val, valueDescription := "value") {
+		if (!isNumber(val)) {
+			throw ValueError(valueDescription " is not a number")
+		}
+		return Number(val)
+	}
+
+	static requireStrLen(str, len) {
+		if (!(str is String) || strlen(str) !== len) {
+			throw ValueError(format("expected string of length {}, but got {}", len, strlen(str)))
+		}
+		return str
+	}
+
+	static findDiffIndex(array1, array2, elemEqualsPredicate) {
+		i := 1
+		while (i <= array1.length && i <= array2.length) {
+			if (!elemEqualsPredicate(array1[i], array2[i])) {
+				return i
+			}
+			i++
+		}
+		if (i <= array1.length || i <= array2.length) {
 			return i
 		}
-		i++
+		return 0
 	}
-	return 0
-}
 
-arrayMap(array, f) {
-	withIndex := f.maxParams > 1
-	results := []
-	for i, elem in array {
-		result := withIndex ? f(i, elem) : f(elem)
-		results.push(result)
-	}
-	return results
-}
-
-charAt(str, index) {
-	return substr(str, index, 1)
-}
-
-skip(str, prefix, &i) {
-	pl := strlen(prefix)
-	matches := substr(str, i, pl) == prefix
-	if (matches) {
-		i += pl
-	}
-	return matches
-}
-
-requireInteger(val, valueDescription := "value") {
-	if (!isInteger(val)) {
-		throw ValueError(valueDescription " is not an integer")
-	}
-	return Integer(val)
-}
-
-requireNumber(val, valueDescription := "value") {
-	if (!isNumber(val)) {
-		throw ValueError(valueDescription " is not a number")
-	}
-	return Number(val)
-}
-
-requireStrLen(str, len) {
-	if (!(str is String) || strlen(str) !== len) {
-		throw ValueError(format("expected string of length {}, but got {}", len, strlen(str)))
-	}
-	return str
-}
-
-findDiffIndex(array1, array2, elemEqualsPredicate) {
-	i := 1
-	while (i <= array1.length && i <= array2.length) {
-		if (!elemEqualsPredicate(array1[i], array2[i])) {
-			return i
-		}
-		i++
-	}
-	if (i <= array1.length || i <= array2.length) {
-		return i
-	}
-	return 0
-}
-
-moveToOrInsertAt0(array, elem) {
-	resultArray := [elem]
-	for e in array {
-		if (e !== elem) {
-			resultArray.push(e)
-		}
-	}
-	return resultArray
-}
-
-parseTileParameter(cmdString, screensMgr, &i, &cmdStrPart) {
-	for s in screensMgr.screens {
-		for t in s.tiles {
-			if (skip(cmdString, t.input, &i)) {
-				cmdStrPart := t.input
-				return t
+	static moveToOrInsertAt0(array, elem) {
+		resultArray := [elem]
+		for e in array {
+			if (e !== elem) {
+				resultArray.push(e)
 			}
 		}
+		return resultArray
 	}
-	return false
-}
 
+	static parseTileParameter(cmdString, screensMgr, &i, &cmdStrPart) {
+		for s in screensMgr.screens {
+			for t in s.tiles {
+				if (Mostil.Util.skip(cmdString, t.input, &i)) {
+					cmdStrPart := t.input
+					return t
+				}
+			}
+		}
+		return false
+	}
+}
 class Position {
 	__new(x, y, w, h) {
 		this.x := x
@@ -201,19 +204,19 @@ class Position {
 	static ofWindow(windowId) {
 		x := y := w := h := ""
 		winGetPos(&x, &y, &w, &h, windowId)
-		return Position(x, y, w, h)
+		return Mostil.Position(x, y, w, h)
 	}
 
 	static ofWindowClient(windowId) {
 		x := y := w := h := ""
 		winGetClientPos(&x, &y, &w, &h, windowId)
-		return Position(x, y, w, h)
+		return Mostil.Position(x, y, w, h)
 	}
 
 	static ofGuiControl(gc) {
 		x := y := w := h := ""
 		gc.getPos(&x, &y, &w, &h)
-		return Position(x, y, w, h)
+		return Mostil.Position(x, y, w, h)
 	}
 
 	toString() {
@@ -227,7 +230,7 @@ class Position {
 	center(ratio) {
 		w := this.w * ratio
 		h := this.h * ratio
-		return Position(this.x + (this.w - w) / 2, this.y + (this.h - h) / 2, w, h)
+		return Mostil.Position(this.x + (this.w - w) / 2, this.y + (this.h - h) / 2, w, h)
 	}
 }
 
@@ -250,7 +253,7 @@ class SplitPosition {
 	}
 
 	reset() {
-		printDebugF('before reset: {}', () => [this.toString()])
+		Mostil.Util.printDebugF('before reset: {}', () => [this.toString()])
 		this.splitPercentage := this.defaultSplitPercentage
 	}
 
@@ -259,17 +262,17 @@ class SplitPosition {
 	}
 
 	increment(stepCount := 1) {
-		printDebugF('before increment({}): {}', () => [stepCount, this.toString()])
+		Mostil.Util.printDebugF('before increment({}): {}', () => [stepCount, this.toString()])
 		this.splitPercentage := this.splitPercentage.addPercentage(this.stepPercentage, stepCount)
 		if (this.splitPercentage.lessThan(this.minSplitPercentage)) {
-			printDebug('set to min')
+			Mostil.Util.printDebug('set to min')
 			this.splitPercentage := this.minSplitPercentage
 		}
 		if (this.splitPercentage.greaterThan(this.maxSplitPercentage)) {
-			printDebug('set to max')
+			Mostil.Util.printDebug('set to max')
 			this.splitPercentage := this.maxSplitPercentage
 		}
-		printDebugF('after  increment({}): {}', () => [stepCount, this.toString()])
+		Mostil.Util.printDebugF('after  increment({}): {}', () => [stepCount, this.toString()])
 	}
 
 	getChildPositions() {
@@ -281,8 +284,8 @@ class SplitPosition {
 			; x      x+s            x+w
 			splitValue := round(this.splitPercentage.applyTo(pos.w))
 			results := [ ;
-				Position(pos.x, pos.y, splitValue, pos.h), ;
-				Position(pos.x + splitValue, pos.y, pos.w - splitValue, pos.h)]
+				Mostil.Position(pos.x, pos.y, splitValue, pos.h), ;
+				Mostil.Position(pos.x + splitValue, pos.y, pos.w - splitValue, pos.h)]
 		} else {
 			; +-------+  y
 			; |       |
@@ -293,10 +296,10 @@ class SplitPosition {
 			; x      x+w
 			splitValue := round(this.splitPercentage.applyTo(pos.h))
 			results := [ ;
-				Position(pos.x, pos.y, pos.w, splitValue), ;
-				Position(pos.x, pos.y + splitValue, pos.w, pos.h - splitValue)]
+				Mostil.Position(pos.x, pos.y, pos.w, splitValue), ;
+				Mostil.Position(pos.x, pos.y + splitValue, pos.w, pos.h - splitValue)]
 		}
-		printDebugF("getChildPositions() == {}", () => [dump(results)])
+		Mostil.Util.printDebugF("getChildPositions() == {}", () => [Mostil.Util.dump(results)])
 		return results
 	}
 }
@@ -329,7 +332,7 @@ class Percentage {
 		} else if (value > max) {
 			throw ValueError("invalid percentage " valueDescription)
 		}
-		return Percentage(value, max)
+		return Mostil.Percentage(value, max)
 	}
 
 	toString() {
@@ -360,6 +363,6 @@ class Percentage {
 		}
 		newValue := this.value + multiplier * otherPercentage.value
 		newValue := min(this.max, max(0, newValue))
-		return Percentage(newValue, this.max)
+		return Mostil.Percentage(newValue, this.max)
 	}
 }

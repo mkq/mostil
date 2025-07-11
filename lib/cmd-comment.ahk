@@ -1,4 +1,5 @@
-#include %A_ScriptDir%/lib/core.ahk
+#include %A_SCRIPTDIR%/lib/util.ahk
+#include %A_SCRIPTDIR%/lib/cmd.ahk
 
 class CommentCommandParser extends CommandParser {
 	static parseConfig(config) {
@@ -10,9 +11,9 @@ class CommentCommandParser extends CommandParser {
 		this.endCommentChars := endCommentChar
 	}
 
-	parse(cmdStr, &i, commandParseResults) {
+	parse(cmdStr, pendingCommandParseResults, &i, commandParseResults) {
 		if (charAt(cmdStr, i) !== this.startCommentChar) {
-			return super.parse(cmdStr, &i, commandParseResults)
+			return super.parse(cmdStr, pendingCommandParseResults, &i, commandParseResults)
 		}
 		depth := 1, len := strlen(cmdStr)
 		while (i <= len && depth > 0) {

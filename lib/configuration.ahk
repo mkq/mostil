@@ -1,32 +1,34 @@
-#include %A_ScriptDir%/lib/util.ahk
-#include %A_ScriptDir%/lib/cmd-comment.ahk
-#include %A_ScriptDir%/lib/cmd-place-window.ahk
-#include %A_ScriptDir%/lib/cmd-resize-split.ahk
+#include %A_SCRIPTDIR%/lib/cmd-comment.ahk
+#include %A_SCRIPTDIR%/lib/cmd-place-window.ahk
+#include %A_SCRIPTDIR%/lib/cmd-resize-split.ahk
+#include %A_SCRIPTDIR%/lib/configuration.ahk
+#include %A_SCRIPTDIR%/lib/screen.ahk
+#include %A_SCRIPTDIR%/lib/screens.ahk
+#include %A_SCRIPTDIR%/lib/util.ahk
 
-class Configuration extends Object {
+class Configuration {
 	__new(rawConfig) {
 		this.debug := getProp(rawConfig, "debug", false)
 		this.closeOnFocusLost := getProp(rawConfig, "closeOnFocusLost", true)
-		this.hotkey := rawConfig.hotkey
 		this.screensManager := Configuration.parseScreensConfig_(getMandatoryProp(rawConfig, 'screens',
 			'no screens configured'))
-		this.commandParsers := Configuration.parseCommandsConfig_(rawConfig.commands)
+		this.commandParsers := Configuration.parseCommandsConfig_(rawConfig.commands, this.screensManager)
 		printDebug("Configuration ctor end")
 	}
 
-	static parseCommandsConfig_(rawCommandsConfigs) {
+	static parseCommandsConfig_(rawCommandsConfigs, screensManager) {
 		parsers := []
 		windowNames := []
 		for r in rawCommandsConfigs {
 			switch r.command {
 				case "placeWindow":
-					parser := PlaceWindowCommandParser.parseConfig(r)
+					parser := PlaceWindowCommandParser.parseConfig(r, screensManager)
 					if (arrayIndexOf(windowNames, parser.name) > 0) {
 						throw ValueError("duplicate window name " parser.name)
 					}
 					windowNames.push(parser.name)
 				case "resizeSplit":
-					parser := ResizeSplitCommandParser.parseConfig(r)
+					parser := ResizeSplitCommandParser.parseConfig(r, screensManager)
 				case "comment":
 					parser := CommentCommandParser.parseConfig(r)
 				default:

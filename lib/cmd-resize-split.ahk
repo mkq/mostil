@@ -1,19 +1,19 @@
-#include %A_ScriptDir%/lib/util.ahk
-#include %A_ScriptDir%/lib/core.ahk
+#include %A_SCRIPTDIR%/lib/util.ahk
 
 class ResizeSplitCommandParser extends CommandParser {
-	static parseConfig(config) {
-		return ResizeSplitCommandParser(config.input)
+	static parseConfig(config, screensMgr) {
+		return ResizeSplitCommandParser(config.input, screensMgr)
 	}
 
-	__new(input) {
+	__new(input, screensMgr) {
 		this.input := input
+		this.screensManager := screensMgr
 	}
 
-	parse(cmdStr, &i, commandParseResults) {
+	parse(cmdStr, pendingCommandParseResults, &i, commandParseResults) {
 		origI := i
 		if (!skip(cmdStr, this.input, &i)) {
-			return super.parse(cmdStr, &i, commandParseResults)
+			return super.parse(cmdStr, pendingCommandParseResults, &i, commandParseResults)
 		}
 		resetChar := substr(this.input, -1)
 
@@ -36,16 +36,17 @@ class ResizeSplitCommandParser extends CommandParser {
 	parseArg_(cmdStr, &i, resetChar, inputPrefix) {
 		len := strlen(cmdStr)
 		if (skip(cmdStr, resetChar, &i)) {
-			return CommandParseResult(inputPrefix . resetChar, ResizeSplitCommand())
+			return CommandParseResult(inputPrefix . resetChar, ResizeSplitCommand(this.screensManager))
 		}
 		input := ""
-		t := parseTileParameter(cmdStr, &i, &input)
-		return t == false ? false : CommandParseResult(inputPrefix . input, ResizeSplitCommand(t))
+		t := parseTileParameter(cmdStr, this.screensManager, &i, &input)
+		return t == false ? false : CommandParseResult(inputPrefix . input, ResizeSplitCommand(this.screensManager, t))
 	}
 }
 
 class ResizeSplitCommand extends Command {
-	__new(selectedTile := false) {
+	__new(screensMgr, selectedTile := false) {
+		this.screensManager := screensMgr
 		this.selectedTile := selectedTile
 	}
 
@@ -57,7 +58,7 @@ class ResizeSplitCommand extends Command {
 		if (this.selectedTile is Tile) {
 			this.selectedTile.moveSplit()
 		} else {
-			gl.screensManager.forEachScreen(s => s.resetSplit())
+			this.screensManager.forEachScreen(s => s.resetSplit())
 		}
 
 		; TODO resize all windows in the tile and its sibling tile
@@ -71,7 +72,7 @@ class ResizeSplitCommand extends Command {
 		if (this.selectedTile is Tile) {
 			this.selectedTile.screen.updateWindowPositions()
 		} else {
-			gl.screensManager.forEachScreen(s => s.updateWindowPositions())
+			this.screensManager.forEachScreen(s => s.updateWindowPositions())
 		}
 	}
 }

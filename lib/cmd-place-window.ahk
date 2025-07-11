@@ -1,8 +1,8 @@
-#include %A_ScriptDir%/lib/util.ahk
-#include %A_ScriptDir%/lib/core.ahk
+#include %A_SCRIPTDIR%/lib/cmd.ahk
+#include %A_SCRIPTDIR%/lib/util.ahk
 
 class PlaceWindowCommandParser extends CommandParser {
-	static parseConfig(config) {
+	static parseConfig(config, screensManager) {
 		cmd := getProp(config, "run", "")
 		previewIcon := getProp(config, "previewIcon", false)
 		if (previewIcon) { ; parse previewIcon (format "[index]file" or just "file")
@@ -12,10 +12,11 @@ class PlaceWindowCommandParser extends CommandParser {
 		} else {
 			previewIcon := { file: "shell32.dll", index: 1 }
 		}
-		return PlaceWindowCommandParser(config.input, getProp(config, "name", ""), getProp(config, "criteria"), previewIcon, cmd)
+		return PlaceWindowCommandParser(screensManager, config.input, getProp(config, "name", ""), getProp(config, "criteria"), previewIcon, cmd)
 	}
 
-	__new(windowInput, name, criteria, defaultPreviewIcon, launchCmdStr := "") {
+	__new(screensManager, windowInput, name, criteria, defaultPreviewIcon, launchCmdStr := "") {
+		this.screensManager := screensManager
 		this.windowInput := windowInput
 		this.name := name
 		this.criteria := criteria
@@ -23,13 +24,13 @@ class PlaceWindowCommandParser extends CommandParser {
 		this.launchCmdStr := launchCmdStr
 	}
 
-	parse(cmdStr, &i, commandParseResults) {
+	parse(cmdStr, pendingCommandParseResults, &i, commandParseResults) {
 		if (!skip(cmdStr, this.windowInput, &i)) {
-			return super.parse(cmdStr, &i, commandParseResults)
+			return super.parse(cmdStr, pendingCommandParseResults, &i, commandParseResults)
 		}
 		tileInput := ""
-		t := parseTileParameter(cmdStr, &i, &tileInput)
-		cmd := PlaceWindowCommand(t, this.name, this.criteria, this.launchCmdStr, this.defaultPreviewIcon)
+		t := parseTileParameter(cmdStr, this.screensManager, &i, &tileInput)
+		cmd := PlaceWindowCommand(t, this.name, this.criteria, this.launchCmdStr, this.defaultPreviewIcon, this.screensManager)
 		; A PlaceWindowCommand with selected tile should replace one for the same window.
 		; This happens all the time when the user types the window name followed by the tile.
 		; TODO Is the condition sufficient or must all preceding commands in pendingCommandParseResults and
@@ -38,12 +39,12 @@ class PlaceWindowCommandParser extends CommandParser {
 		; inputs & detect replacement with them? E.g. with a window called "e" and a tile "t" and command "e"
 		; having the same index in pendingCommandParseResults as "et" in commands, we know that the former became the
 		; latter and should be replaced.
-		if (t && gl.pendingCommandParseResults.length > 0) {
-			replacedCommandParseResult := gl.pendingCommandParseResults[-1]
+		if (t && pendingCommandParseResults.length > 0) {
+			replacedCommandParseResult := pendingCommandParseResults[-1]
 			if (replacedCommandParseResult.command is PlaceWindowCommand
 				&& replacedCommandParseResult.command.windowSpec.name == this.name) {
 				printDebug('replacing command "{}"', replacedCommandParseResult.input)
-				gl.pendingCommandParseResults.removeAt(-1)
+				pendingCommandParseResults.removeAt(-1)
 			}
 		}
 		commandParseResults.push(CommandParseResult(this.windowInput . tileInput, cmd))
@@ -52,7 +53,7 @@ class PlaceWindowCommandParser extends CommandParser {
 }
 
 class PlaceWindowCommand extends Command {
-	__new(selectedTile, name, criteria, launchCmdStr, defaultPreviewIcon) {
+	__new(selectedTile, name, criteria, launchCmdStr, defaultPreviewIcon, screensManager) {
 		this.selectedTile := selectedTile
 		this.windowSpec := {
 			name: name,
@@ -60,6 +61,8 @@ class PlaceWindowCommand extends Command {
 			launchCommand: launchCmdStr
 		}
 		this.defaultPreviewIcon := defaultPreviewIcon
+		this.screensManager := screensManager
+
 		this.windowId := 0
 		this.oldTileText := selectedTile ? selectedTile.text : false
 		this.oldTileIcon := selectedTile ? selectedTile.icon.internalFormat : false
@@ -118,7 +121,7 @@ class PlaceWindowCommand extends Command {
 			printDebug('winWait returned {}', this.windowId)
 
 			if (!this.windowId) {
-				gl.screensManager.screenWithInput.gui.statusBar.setText(format('WARN: running {} did not yield a window matching {}',
+				this.screensManager.screenWithInput.gui.statusBar.setText(format('WARN: running {} did not yield a window matching {}',
 					this.windowSpec.launchCommand, this.windowSpec.criteria))
 				return
 			}

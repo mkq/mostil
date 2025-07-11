@@ -1,5 +1,14 @@
 #Requires AutoHotkey v2
 setTitleMatchMode("RegEx")
+#include %A_SCRIPTDIR%/lib/cmd.ahk
+#include %A_SCRIPTDIR%/lib/cmd-comment.ahk
+#include %A_SCRIPTDIR%/lib/cmd-place-window.ahk
+#include %A_SCRIPTDIR%/lib/cmd-resize-split.ahk
+#include %A_SCRIPTDIR%/lib/configuration.ahk
+#include %A_SCRIPTDIR%/lib/icon.ahk
+#include %A_SCRIPTDIR%/lib/screen.ahk
+#include %A_SCRIPTDIR%/lib/util.ahk
+#include %A_SCRIPTDIR%/lib/window-util.ahk
 
 ; TODO
 ; - allow nesting like a real tiling window manager (a screen can have a parent tile instead of fixed x, y, w, h)
@@ -20,16 +29,6 @@ setTitleMatchMode("RegEx")
 ;   - "e^3^" => select window "e", wait 3s, focus back. => Can be used to briefly check a window.
 
 class Mostil {
-	#include %A_SCRIPTDIR%/lib/cmd.ahk
-	#include %A_SCRIPTDIR%/lib/cmd-comment.ahk
-	#include %A_SCRIPTDIR%/lib/cmd-place-window.ahk
-	#include %A_SCRIPTDIR%/lib/cmd-resize-split.ahk
-	#include %A_SCRIPTDIR%/lib/configuration.ahk
-	#include %A_SCRIPTDIR%/lib/icon.ahk
-	#include %A_SCRIPTDIR%/lib/screen.ahk
-	#include %A_SCRIPTDIR%/lib/util.ahk
-	#include %A_SCRIPTDIR%/lib/window-util.ahk
-
 	; ____________________________________ init
 	static SHORT_PROGRAM_NAME := "Mostil"
 	static LONG_PROGRAM_NAME := Mostil.SHORT_PROGRAM_NAME " - Mostly tiling window layout manager"
@@ -44,13 +43,13 @@ class Mostil {
 	}
 
 	__new(config) {
-		Mostil.Util.printDebugF('{}.__new({})', () => [type(this), Mostil.Util.dump(config)])
-		c := Mostil.Configuration(config)
+		Util.printDebugF('{}.__new({})', () => [type(this), Util.dump(config)])
+		c := Configuration(config)
 		this.commandParsers := c.commandParsers
 		this.screensManager := c.screensManager
 		this.closeOnFocusLostAllowed := true
 		this.defaultInputs := []
-		Mostil.Util.DEBUG_OUTPUT := c.debug
+		Util.DEBUG_OUTPUT := c.debug
 		onMessage(0x6, (wp, lp, msg, hwnd) => ; WM_ACTIVATE
 			(c.closeOnFocusLost && this.closeOnFocusLostAllowed && !wp && this.screensManager.containsWindowId(hwnd))
 				? this.cancel('focus lost') : 1)
@@ -63,7 +62,7 @@ class Mostil {
 	; ____________________________________ core logic
 
 	submit() {
-		Mostil.Util.printDebug("submit")
+		Util.printDebug("submit")
 		if (!this.submittable) {
 			return
 		}
@@ -71,22 +70,22 @@ class Mostil {
 
 		while this.pendingCommandParseResults.length > 0 {
 			cpr := this.pendingCommandParseResults.removeAt(1)
-			Mostil.Util.printDebug("submit {}", cpr)
+			Util.printDebug("submit {}", cpr)
 			cpr.command.submit(this.errorHandler)
 		}
 
 		input := this.screensManager.screenWithInput.gui.input
 		cmdStr := this.normalizeCommandString(input.value)
-		this.defaultInputs := Mostil.Util.moveToOrInsertAt0(this.defaultInputs, cmdStr)
+		this.defaultInputs := Util.moveToOrInsertAt0(this.defaultInputs, cmdStr)
 		input.delete()
 		input.add(this.defaultInputs)
 	}
 
 	cancel(reasonMessage) {
-		Mostil.Util.printDebug('cancel("{}")', reasonMessage)
+		Util.printDebug('cancel("{}")', reasonMessage)
 		while this.pendingCommandParseResults.length > 0 {
 			cpr := this.pendingCommandParseResults.removeAt(-1)
-			Mostil.Util.printDebug("undo {}", cpr)
+			Util.printDebug("undo {}", cpr)
 			cpr.command.undo(this.errorHandler)
 		}
 		this.screensManager.screenWithInput.gui.input.value := ""
@@ -95,7 +94,7 @@ class Mostil {
 
 	onValueChange() {
 		cmdStr := this.screensManager.screenWithInput.gui.input.text
-		Mostil.Util.printDebug('__________ onValueChange("{}") __________', cmdStr)
+		Util.printDebug('__________ onValueChange("{}") __________', cmdStr)
 		newCommandPRs := this.parseCommands(cmdStr)
 		try {
 			this.handleCommandChange(newCommandPRs)
@@ -105,8 +104,8 @@ class Mostil {
 	}
 
 	handleCommandChange(commandParseResults) {
-		Mostil.Util.printDebug("handleCommandChange")
-		diffIndex := Mostil.Util.findDiffIndex(this.pendingCommandParseResults, commandParseResults, (a, b) => a.input == b.input)
+		Util.printDebug("handleCommandChange")
+		diffIndex := Util.findDiffIndex(this.pendingCommandParseResults, commandParseResults, (a, b) => a.input == b.input)
 		if (diffIndex == 0) {
 			return
 		}
@@ -116,7 +115,7 @@ class Mostil {
 			; undo pendingCommandParseResults which are not in commandParseResults:
 			loop this.pendingCommandParseResults.length - diffIndex + 1 {
 				cpr := this.pendingCommandParseResults.removeAt(-1)
-				Mostil.Util.printDebug("undo {}", cpr)
+				Util.printDebug("undo {}", cpr)
 				cpr.command.undo(this.errorHandler)
 			}
 
@@ -124,7 +123,7 @@ class Mostil {
 			i := diffIndex
 			while (i <= commandParseResults.length) {
 				cpr := commandParseResults[i++]
-				Mostil.Util.printDebug("executePreview {}", cpr)
+				Util.printDebug("executePreview {}", cpr)
 				cpr.command.executePreview(this.errorHandler)
 			}
 		} finally {
@@ -142,16 +141,16 @@ class Mostil {
 			prevI := i
 			for (p in this.commandParsers) {
 				if (p.parse(cmdStr, this.pendingCommandParseResults, &i, cprs)) { ; p parsed something at i; continue with 1st parser at (already incremented) index
-					Mostil.Util.printDebug("parsed `"{}`" (next index {} → {}) into {} commands. ⇒ All commands:",
+					Util.printDebug("parsed `"{}`" (next index {} → {}) into {} commands. ⇒ All commands:",
 						cmdStr, prevI, i, cprs.length - prevLength)
-					Mostil.Util.arrayMap(cprs, cpr => Mostil.Util.printDebug("- {}", cpr))
+					Util.arrayMap(cprs, cpr => Util.printDebug("- {}", cpr))
 					break
 				}
 			}
 			if (prevI == i) {
 				global submittable := false
 				msg := format("Invalid or incomplete input starting at index {}: {}", prevI - 1, substr(cmdStr, i))
-				Mostil.Util.printDebug(msg)
+				Util.printDebug(msg)
 				this.screensManager.screenWithInput.gui.statusBar.setText(msg)
 				break
 			}

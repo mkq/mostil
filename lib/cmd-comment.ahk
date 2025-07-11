@@ -1,8 +1,8 @@
 #include %A_SCRIPTDIR%/lib/util.ahk
 
-class CommentCommandParser extends Mostil.CommandParser {
+class CommentCommandParser extends CommandParser {
 	static parseConfig(config) {
-		return Mostil.CommentCommandParser(Mostil.Util.charAt(Mostil.Util.requireStrLen(config.input, 2), 1), Mostil.Util.charAt(config.input, 2))
+		return CommentCommandParser(Util.charAt(Util.requireStrLen(config.input, 2), 1), Util.charAt(config.input, 2))
 	}
 
 	__new(startCommentChar, endCommentChar) {
@@ -11,13 +11,13 @@ class CommentCommandParser extends Mostil.CommandParser {
 	}
 
 	parse(cmdStr, pendingCommandParseResults, &i, commandParseResults) {
-		if (Mostil.Util.charAt(cmdStr, i) !== this.startCommentChar) {
+		if (Util.charAt(cmdStr, i) !== this.startCommentChar) {
 			return super.parse(cmdStr, pendingCommandParseResults, &i, commandParseResults)
 		}
 		i++
 		depth := 1, len := strlen(cmdStr)
 		while (i <= len && depth > 0) {
-			c := Mostil.Util.charAt(cmdStr, i)
+			c := Util.charAt(cmdStr, i)
 			if (c == this.startCommentChar) {
 				depth++
 			} else if (c == this.endCommentChars) {

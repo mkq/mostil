@@ -19,24 +19,24 @@ class Icon {
 	internalFormat {
 		get => { file: this.file, index: this.index, handle: this.handle }
 		set {
-			this.file := Mostil.Util.getProp(value, "file", "")
-			this.index := Mostil.Util.getProp(value, "index", 1)
-			this.handle := Mostil.Util.getProp(value, "handle", 0)
+			this.file := Util.getProp(value, "file", "")
+			this.index := Util.getProp(value, "index", 1)
+			this.handle := Util.getProp(value, "handle", 0)
 			this.updatePicture()
 		}
 	}
 
 	updatePicture() {
 		if (this.handle) {
-			Mostil.Util.printDebug('updatePicture: handle {}', this.handle)
+			Util.printDebug('updatePicture: handle {}', this.handle)
 			this.picture.value := 'HICON:' this.handle
 			this.picture.visible := true
 		} else if (this.file != '') {
-			Mostil.Util.printDebug('updatePicture: file {}, index {}', this.file, this.index)
+			Util.printDebug('updatePicture: file {}, index {}', this.file, this.index)
 			this.picture.value := format('*icon{} {}', this.index, this.file)
 			this.picture.visible := true
 		} else {
-			Mostil.Util.printDebug('updatePicture: hide')
+			Util.printDebug('updatePicture: hide')
 			this.picture.visible := false
 		}
 	}

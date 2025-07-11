@@ -1,9 +1,9 @@
 #include %A_SCRIPTDIR%/lib/util.ahk
 #include %A_SCRIPTDIR%/lib/cmd.ahk
 
-class ResizeSplitCommandParser extends Mostil.CommandParser {
+class ResizeSplitCommandParser extends CommandParser {
 	static parseConfig(config, screensMgr) {
-		return Mostil.ResizeSplitCommandParser(config.input, screensMgr)
+		return ResizeSplitCommandParser(config.input, screensMgr)
 	}
 
 	__new(input, screensMgr) {
@@ -13,7 +13,7 @@ class ResizeSplitCommandParser extends Mostil.CommandParser {
 
 	parse(cmdStr, pendingCommandParseResults, &i, commandParseResults) {
 		origI := i
-		if (!Mostil.Util.skip(cmdStr, this.input, &i)) {
+		if (!Util.skip(cmdStr, this.input, &i)) {
 			return super.parse(cmdStr, pendingCommandParseResults, &i, commandParseResults)
 		}
 		resetChar := substr(this.input, -1)
@@ -36,16 +36,16 @@ class ResizeSplitCommandParser extends Mostil.CommandParser {
 	; We create a new Command for each arg in order to get proper undo() e.g. on each press of backspace key
 	parseArg_(cmdStr, &i, resetChar, inputPrefix) {
 		len := strlen(cmdStr)
-		if (Mostil.Util.skip(cmdStr, resetChar, &i)) {
-			return Mostil.CommandParseResult(inputPrefix . resetChar, Mostil.ResizeSplitCommand(this.screensManager))
+		if (Util.skip(cmdStr, resetChar, &i)) {
+			return CommandParseResult(inputPrefix . resetChar, ResizeSplitCommand(this.screensManager))
 		}
 		input := ""
-		t := Mostil.Util.parseTileParameter(cmdStr, this.screensManager, &i, &input)
-		return t == false ? false : Mostil.CommandParseResult(inputPrefix . input, Mostil.ResizeSplitCommand(this.screensManager, t))
+		t := Util.parseTileParameter(cmdStr, this.screensManager, &i, &input)
+		return t == false ? false : CommandParseResult(inputPrefix . input, ResizeSplitCommand(this.screensManager, t))
 	}
 }
 
-class ResizeSplitCommand extends Mostil.Command {
+class ResizeSplitCommand extends Command {
 	__new(screensMgr, selectedTile := false) {
 		this.screensManager := screensMgr
 		this.selectedTile := selectedTile
@@ -56,7 +56,7 @@ class ResizeSplitCommand extends Mostil.Command {
 	}
 
 	executePreview(errorHandler) {
-		if (this.selectedTile is Mostil.Tile) {
+		if (this.selectedTile is Tile) {
 			this.selectedTile.moveSplit(this.screensManager)
 		} else {
 			this.screensManager.forEachScreen(s => s.resetSplit())

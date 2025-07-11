@@ -35,7 +35,7 @@ class WindowUtil {
 			wid := wid_ ; workaround for Autohotkey bug? Loop variable does not exist in the printDebugF closure, but this copy does.
 			title := winGetTitle(wid)
 			include := title !== '' ; TODO: better criterium to exclude non-window results like Shell_TrayWnd?
-			Mostil.Util.printDebugF('winGetList(): id: {}, processName: {}, class: {}, title: {}, include: {}', () =>
+			Util.printDebugF('winGetList(): id: {}, processName: {}, class: {}, title: {}, include: {}', () =>
 				[wid, winGetProcessName(wid), winGetClass(wid), title, include])
 			if (include) {
 				results.push(wid)
@@ -47,8 +47,8 @@ class WindowUtil {
 	; Actual sendMessage and GetClassLong logic and magic numbers taken from
 	; https://www.autohotkey.com/board/topic/116614-iswitchw-plus-groupedahk-alttab-replacement-window-switcher/
 	static getWindowIcon(winId) {
-		static getIcon_sm := Mostil.Util.addPrintDebugN((winId, iconType) => sendMessage(0x7F, iconType, 0, , winId), 'getIcon_sm') ; 0x7F = WM_GETICON
-		static getIcon_gcl := Mostil.Util.addPrintDebugN((winId, arg) => dllCall("GetClassLong", "uint", winId, "int", arg), 'getIcon_gcl')
+		static getIcon_sm := Util.addPrintDebugN((winId, iconType) => sendMessage(0x7F, iconType, 0, , winId), 'getIcon_sm') ; 0x7F = WM_GETICON
+		static getIcon_gcl := Util.addPrintDebugN((winId, arg) => dllCall("GetClassLong", "uint", winId, "int", arg), 'getIcon_gcl')
 		return getIcon_sm(winId, 1) || getIcon_sm(winId, 2) || getIcon_sm(winId, 0) || getIcon_gcl(winId, -14) || getIcon_gcl(winId, -34)
 	}
 }

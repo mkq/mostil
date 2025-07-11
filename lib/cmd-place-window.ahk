@@ -2,10 +2,10 @@
 #include %A_SCRIPTDIR%/lib/util.ahk
 #include %A_SCRIPTDIR%/lib/window-util.ahk
 
-class PlaceWindowCommandParser extends Mostil.CommandParser {
+class PlaceWindowCommandParser extends CommandParser {
 	static parseConfig(config, screensManager) {
-		cmd := Mostil.Util.getProp(config, "run", "")
-		previewIcon := Mostil.Util.getProp(config, "previewIcon", false)
+		cmd := Util.getProp(config, "run", "")
+		previewIcon := Util.getProp(config, "previewIcon", false)
 		if (previewIcon) { ; parse previewIcon (format "[index]file" or just "file")
 			previewIcon := regExMatch(previewIcon, '^\[(\d+)\](.+)', &match) ? { index: match[1], file: match[2] } : { file: previewIcon, index: 1 }
 		} else if (strlen(cmd) > 0) { ; default previewIcon: 1st word of cmd
@@ -13,8 +13,8 @@ class PlaceWindowCommandParser extends Mostil.CommandParser {
 		} else {
 			previewIcon := { file: "shell32.dll", index: 1 }
 		}
-		return Mostil.PlaceWindowCommandParser(screensManager, config.input,
-			Mostil.Util.getProp(config, "name", ""), Mostil.Util.getProp(config, "criteria"), previewIcon, cmd)
+		return PlaceWindowCommandParser(screensManager, config.input,
+			Util.getProp(config, "name", ""), Util.getProp(config, "criteria"), previewIcon, cmd)
 	}
 
 	__new(screensManager, windowInput, name, criteria, defaultPreviewIcon, launchCmdStr := "") {
@@ -27,12 +27,12 @@ class PlaceWindowCommandParser extends Mostil.CommandParser {
 	}
 
 	parse(cmdStr, pendingCommandParseResults, &i, commandParseResults) {
-		if (!Mostil.Util.skip(cmdStr, this.windowInput, &i)) {
+		if (!Util.skip(cmdStr, this.windowInput, &i)) {
 			return super.parse(cmdStr, pendingCommandParseResults, &i, commandParseResults)
 		}
 		tileInput := ""
-		t := Mostil.Util.parseTileParameter(cmdStr, this.screensManager, &i, &tileInput)
-		cmd := Mostil.PlaceWindowCommand(t, this.name, this.criteria, this.launchCmdStr, this.defaultPreviewIcon, this.screensManager)
+		t := Util.parseTileParameter(cmdStr, this.screensManager, &i, &tileInput)
+		cmd := PlaceWindowCommand(t, this.name, this.criteria, this.launchCmdStr, this.defaultPreviewIcon, this.screensManager)
 		; A PlaceWindowCommand with selected tile should replace one for the same window.
 		; This happens all the time when the user types the window name followed by the tile.
 		; TODO Is the condition sufficient or must all preceding commands in pendingCommandParseResults and
@@ -43,18 +43,18 @@ class PlaceWindowCommandParser extends Mostil.CommandParser {
 		; latter and should be replaced.
 		if (t && pendingCommandParseResults.length > 0) {
 			replacedCommandParseResult := pendingCommandParseResults[-1]
-			if (replacedCommandParseResult.command is Mostil.PlaceWindowCommand
+			if (replacedCommandParseResult.command is PlaceWindowCommand
 				&& replacedCommandParseResult.command.windowSpec.name == this.name) {
-				Mostil.Util.printDebug('replacing command "{}"', replacedCommandParseResult.input)
+				Util.printDebug('replacing command "{}"', replacedCommandParseResult.input)
 				pendingCommandParseResults.removeAt(-1)
 			}
 		}
-		commandParseResults.push(Mostil.CommandParseResult(this.windowInput . tileInput, cmd))
+		commandParseResults.push(CommandParseResult(this.windowInput . tileInput, cmd))
 		return true
 	}
 }
 
-class PlaceWindowCommand extends Mostil.Command {
+class PlaceWindowCommand extends Command {
 	__new(selectedTile, name, criteria, launchCmdStr, defaultPreviewIcon, screensManager) {
 		this.selectedTile := selectedTile
 		this.windowSpec := {
@@ -77,36 +77,36 @@ class PlaceWindowCommand extends Mostil.Command {
 	executePreview(errorHandler) {
 		if (this.windowSpec.criteria) {
 			this.windowId := winExist(this.windowSpec.criteria)
-			Mostil.Util.printDebug('window for {}: {}', this.windowSpec.criteria, this.windowId)
+			Util.printDebug('window for {}: {}', this.windowSpec.criteria, this.windowId)
 		} else { ; MRU mode
-			myWindowIds := Mostil.Util.arrayMap(this.screensManager.screens, s => s.gui.gui.hwnd)
-			Mostil.Util.printDebugF('my window ids: {}', () => [Mostil.Util.dump(myWindowIds)])
+			myWindowIds := Util.arrayMap(this.screensManager.screens, s => s.gui.gui.hwnd)
+			Util.printDebugF('my window ids: {}', () => [Util.dump(myWindowIds)])
 			this.windowId := 0
 			for wid in WindowUtil.getNormalWindowIds() {
-				if (Mostil.Util.arrayIndexOf(myWindowIds, wid) == 0) {
+				if (Util.arrayIndexOf(myWindowIds, wid) == 0) {
 					this.windowId := wid
 					break
 				}
 			}
-			Mostil.Util.printDebug('MRU window: {}', this.windowId)
+			Util.printDebug('MRU window: {}', this.windowId)
 		}
 
 		if (!this.windowId) { ; selected window does not exist
 			if (!this.selectedTile) { ; no tile, i.e. focus-only mode, but selected window does not exist: do nothing
-				Mostil.Util.printDebug('focus non-existing window => do nothing')
+				Util.printDebug('focus non-existing window => do nothing')
 				return
 			}
 			if (!this.windowSpec.launchCommand) {
 				; TODO If selected window does not exist and has no run command configured, the parser should already
 				; treat the input as invalid.
-				Mostil.Util.printDebug('non-existing, no launch command => do nothing')
+				Util.printDebug('non-existing, no launch command => do nothing')
 				return
 			}
 			this.oldTileText := this.selectedTile.text := this.windowSpec.launchCommand " (pending launch)"
 			this.oldTileIcon := this.selectedTile.icon.setToFile(this.defaultPreviewIcon.file, this.defaultPreviewIcon.index)
 		} else if (this.selectedTile) {
 			this.oldTileText := this.selectedTile.text := "window " this.windowId
-			this.oldTileIcon := this.selectedTile.icon.setToHandle(Mostil.WindowUtil.getWindowIcon(this.windowId))
+			this.oldTileIcon := this.selectedTile.icon.setToHandle(WindowUtil.getWindowIcon(this.windowId))
 		}
 	}
 
@@ -117,11 +117,11 @@ class PlaceWindowCommand extends Mostil.Command {
 		}
 
 		if (!this.windowId) {
-			Mostil.Util.printDebug('run: {}', this.windowSpec.launchCommand)
+			Util.printDebug('run: {}', this.windowSpec.launchCommand)
 			run(this.windowSpec.launchCommand)
-			Mostil.Util.printDebug('waiting for window {}', this.windowSpec.criteria)
+			Util.printDebug('waiting for window {}', this.windowSpec.criteria)
 			this.windowId := winWait(this.windowSpec.criteria, , 20)
-			Mostil.Util.printDebug('winWait returned {}', this.windowId)
+			Util.printDebug('winWait returned {}', this.windowId)
 
 			if (!this.windowId) {
 				this.screensManager.screenWithInput.gui.statusBar.setText(format('WARN: running {} did not yield a window matching {}',

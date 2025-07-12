@@ -56,6 +56,7 @@ class PlaceWindowCommandParser extends CommandParser {
 
 class PlaceWindowCommand extends Command {
 	__new(selectedTile, name, criteria, launchCmdStr, defaultPreviewIcon, screensManager) {
+		super.__new()
 		this.selectedTile := selectedTile
 		this.windowSpec := {
 			name: name,
@@ -71,7 +72,7 @@ class PlaceWindowCommand extends Command {
 	}
 
 	toString() {
-		return format("{}({}, {})", type(this), this.windowSpec.name, String(this.selectedTile))
+		return format("{}({}, {})", super.toString(), this.windowSpec.name, String(this.selectedTile))
 	}
 
 	executePreview(errorHandler) {

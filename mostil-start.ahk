@@ -25,18 +25,18 @@ hotkey("!f5", Mostil.start({
 	;   - scale: preview GUI scale relative to the screen; default: "100%"
 	;   - input: boolean whether this is the preview UI with input controls; at most one screen may have input: true;
 	screens: {
-		;q: { x: -2560, y: -200, w: 2560, h: 2880, split: "v60%", grid: "10%", snap: ["30%", "70%"], inputs: ["h", "n"] },
-		;w: { x:     0, y:    0, w: 5120, h: 2160, split: "h38%", grid: "12%", snap: ["20%", "51%"], inputs: ["r", "t"] },
-		l: { x: 0, y: 0, w: 1300, h: 2000, split: "v", grid: "10%", snap: ["20%", "90%"], inputs: ["h", "n"] },
-		r: { x: 1300, y: 0, w: 2540, h: 1100, split: "h38%", grid: "7%", snap: ["25%", "75%"], inputs: ["r", "t"], ui: { input: true } },
-		;f: { x:     0, y:    0, w: 3838, h: 2080, split: "v0",   inputs: ["↑", "f"], ui: { x: 2900, y: 1500, scale: 20 } },
+		;Q: { x: -2560, y: -200, w: 2560, h: 2880, split: "v60%", grid: "10%", snap: ["30%", "70%"], inputs: ["h", "n"] },
+		;W: { x:     0, y:    0, w: 5120, h: 2160, split: "h38%", grid: "12%", snap: ["20%", "51%"], inputs: ["r", "t"] },
+		L: { x: 0, y: 0, w: 1300, h: 2000, split: "v", grid: "10%", snap: ["20%", "90%"], inputs: ["h", "n"] },
+		R: { x: 1300, y: 0, w: 2540, h: 1100, split: "h38%", grid: "7%", snap: ["25%", "75%"], inputs: ["r", "t"], ui: { input: true } },
+		;F: { x:     0, y:    0, w: 3838, h: 2080, split: "v0",   inputs: ["↑", "f"], ui: { x: 2900, y: 1500, scale: 20 } },
 	},
 	; A command is selected by typing its input character sequence, immediately followed by as many
 	; parameters as it accepts.
 	; Command types:
 	; - "placeWindow" moves a window to a tile and focuses it, optionally launching a program if no matching window
 	;   exists.
-	;   Without parameter, the window is just focussed.
+	;   Without parameter, the window is just focused.
 	;   Otherwise requires one parameter: the target tile (i.e. an element of a screen's input attribute).
 	;   Config attributes:
 	;   * criteria: how to find the window; without criteria, the most recently active window is used

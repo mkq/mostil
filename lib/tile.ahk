@@ -7,6 +7,9 @@ class Tile {
 		this.name := name
 		this.input := input
 		this.screen := false
+		; TODO Array of { windowId, icon, text }
+		; ⇒ When PlaceWindowCommand moves a window currently in this Tile to another, this Tile can show the
+		; last remaining window's icon & text.
 		this.windowIds := Map() ; a set of window IDs represented as Map windowId -> true
 		this.text_ := ""
 	}
@@ -30,7 +33,7 @@ class Tile {
 	; Moves the parent screen's split in the direction corresponding to this tile, making this tile smaller and the sibling
 	; tile bigger.
 	moveSplit(screensMgr) {
-		this.screen.moveSplit(screensMgr, this.index)
+		return this.screen.moveSplit(screensMgr, this.index)
 	}
 
 	; Called by the parent screen to move all windows placed in this tile to the given coordinates.

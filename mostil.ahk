@@ -103,6 +103,13 @@ class Mostil {
 		}
 	}
 
+	; TODO (Bug) Do not replace uncommitted Command instances with new ones, because it breaks undo.
+	; Example:
+	; - input: "-t" ⇒ instance 1, executePreview 1
+	; - input: "t" ⇒ "-tt" ⇒ instances [2, 3], executePreview 3
+	; - input: Backspace ⇒ "-t" ⇒ instance 4, undoes 3
+	; - input: Backspace ⇒ "-" ⇒ creates none, unparsed input "-", undoes 4
+	; So, 1 and 3 store undo data, but 3 and 4 are undone.
 	handleCommandChange(commandParseResults) {
 		Util.printDebug("handleCommandChange")
 		diffIndex := Util.findDiffIndex(this.pendingCommandParseResults, commandParseResults, (a, b) => a.input == b.input)

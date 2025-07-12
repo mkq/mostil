@@ -27,26 +27,32 @@ class ScreensManager {
 	}
 
 	forEachScreen(f) {
+		results := []
 		for s in this.screens {
-			f(s)
+			results.push(f(s))
 		}
+		return results
 	}
 
 	forEachScreenInputScreenLast(f) {
+		results := []
 		for s in this.screens {
 			if (s !== this.screenWithInput) {
-				f(s)
+				results.push(f(s))
 			}
 		}
-		f(this.screenWithInput)
+		results.push(f(this.screenWithInput))
+		return results
 	}
 
 	forEachTile(f) {
+		results := []
 		for s in this.screens {
 			for t in s.tiles {
-				f(t)
+				results.push(f(t))
 			}
 		}
+		return results
 	}
 
 	containsWindowId(windowId) {

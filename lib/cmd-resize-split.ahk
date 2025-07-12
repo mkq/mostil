@@ -37,7 +37,7 @@ class ResizeSplitCommandParser extends CommandParser {
 	parseArg_(cmdStr, &i, resetChar, inputPrefix) {
 		len := strlen(cmdStr)
 		if (Util.skip(cmdStr, resetChar, &i)) {
-			return CommandParseResult(inputPrefix . resetChar, ResizeSplitCommand(this.screensManager))
+			return CommandParseResult(inputPrefix . resetChar, ResetSplitCommand(this.screensManager))
 		}
 		input := ""
 		t := Util.parseTileParameter(cmdStr, this.screensManager, &i, &input)
@@ -46,34 +46,51 @@ class ResizeSplitCommandParser extends CommandParser {
 }
 
 class ResizeSplitCommand extends Command {
-	__new(screensMgr, selectedTile := false) {
+	__new(screensMgr, selectedTile) {
+		super.__new()
 		this.screensManager := screensMgr
 		this.selectedTile := selectedTile
+		this.oldSplitPercentage := false
 	}
 
 	toString() {
-		return format("{}({})", type(this), this.selectedTile is Tile ? this.selectedTile.toString() : "")
+		return format("{}({})", super.toString(), this.selectedTile.toString())
 	}
 
 	executePreview(errorHandler) {
-		if (this.selectedTile is Tile) {
-			this.selectedTile.moveSplit(this.screensManager)
-		} else {
-			this.screensManager.forEachScreen(s => s.resetSplit())
-		}
-
-		; TODO resize all windows in the tile and its sibling tile
+		this.oldSplitPercentage := Util.checkType(Percentage, this.selectedTile.moveSplit(this.screensManager))
+		Util.printDebugF('oldSplitPercentage == {}', () => [this.oldSplitPercentage])
 	}
 
 	submit(errorHandler) {
-		; nothing to do
+		this.selectedTile.screen.updateWindowPositions()
 	}
 
 	undo(errorHandler) {
-		if (this.selectedTile is Tile) {
-			this.selectedTile.screen.updateWindowPositions()
-		} else {
-			this.screensManager.forEachScreen(s => s.updateWindowPositions())
-		}
+		Util.printDebugF('oldSplitPercentage == {}', () => [this.oldSplitPercentage])
+		this.selectedTile.screen.setSplitToPercentage(this.oldSplitPercentage, this.screensManager)
+	}
+}
+
+class ResetSplitCommand extends Command {
+	__new(screensMgr) {
+		this.screensManager := screensMgr
+	}
+
+	toString() {
+		return type(this)
+	}
+
+	executePreview(errorHandler) {
+		this.oldSplitPercentages := Util.checkType(Percentage, this.screensManager.forEachScreen(s => s.resetSplit()))
+	}
+
+	submit(errorHandler) {
+		this.screensManager.forEachScreen(s => s.updateWindowPositions())
+	}
+
+	undo(errorHandler) {
+		i := 0
+		this.screensManager.forEachScreen(s => s.setSplitToPercentage(this.oldSplitPercentages[++i]))
 	}
 }

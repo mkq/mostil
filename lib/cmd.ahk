@@ -10,8 +10,14 @@ class CommandParser {
 }
 
 class Command {
+	static nextId := 1
+
+	__new() {
+		this.id := Command.nextId++
+	}
+
 	toString() {
-		return type(this)
+		return type(this) '@' this.id
 	}
 
 	; Executes this command, but only so far that it can be undone.

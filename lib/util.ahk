@@ -23,6 +23,21 @@ class Util {
 		}
 	}
 
+	; Checks a value's type
+	; @param requiredType a Class or a type name as string or "Boolean"
+	; @return value
+	static checkType(requiredType, value) {
+		requiredType2 := requiredType = 'boolean' ? 'Integer' : requiredType
+		valid := requiredType2 is String ? (type(value) = requiredType2) : (value is requiredType2)
+		if (requiredType = 'boolean') {
+			valid := valid && (value == 0 || value == 1)
+		}
+		if (!valid) {
+			throw TypeError(format('invalid type {}: {}', type(value), Util.toString(value)))
+		}
+		return value
+	}
+
 	; Adds debug logging to a given function with a given name.
 	; Especially for closures which don't have a name.
 	static addPrintDebugN(f, name) {
@@ -188,10 +203,18 @@ class Util {
 }
 class Position {
 	__new(x, y, w, h) {
-		this.x := x
-		this.y := y
-		this.w := w
-		this.h := h
+		this.x := Util.checkType(Integer, x)
+		this.y := Util.checkType(Integer, y)
+		this.w := Util.checkType(Integer, w)
+		this.h := Util.checkType(Integer, h)
+	}
+
+	static ofFloats(x, y, w, h) {
+		return Position(
+			round(Util.checkType(Float, x)),
+			round(Util.checkType(Float, y)),
+			round(Util.checkType(Float, w)),
+			round(Util.checkType(Float, h)))
 	}
 
 	static ofWindow(windowId) {
@@ -223,19 +246,22 @@ class Position {
 	center(ratio) {
 		w := this.w * ratio
 		h := this.h * ratio
-		return Position(this.x + (this.w - w) / 2, this.y + (this.h - h) / 2, w, h)
+		return Position.ofFloats(this.x + (this.w - w) / 2, this.y + (this.h - h) / 2, w, h)
 	}
 }
 
+; A helper to split/divide a Position either horizontally (side-by-side) or vertically (top, bottom). The
+; split can be moved in steps of size stepPercentage in a range from minSplitPercentage to maxSplitPercentage,
+; inclusive. It is initially at defaultSplitPercentage and can be reset to that value.
 class SplitPosition {
 	__new(horizontal, pos, defaultSplitPercentage, minSplitPercentage, maxSplitPercentage, stepPercentage) {
-		this.horizontal := horizontal
-		this.position := pos
-		this.defaultSplitPercentage := defaultSplitPercentage
-		this.minSplitPercentage := minSplitPercentage
-		this.maxSplitPercentage := maxSplitPercentage
-		this.stepPercentage := stepPercentage
-		this.splitPercentage := defaultSplitPercentage
+		this.horizontal := Util.checkType('boolean', horizontal)
+		this.position := Util.checkType(Position, pos)
+		this.defaultSplitPercentage := Util.checkType(Percentage, defaultSplitPercentage)
+		this.minSplitPercentage := Util.checkType(Percentage, minSplitPercentage)
+		this.maxSplitPercentage := Util.checkType(Percentage, maxSplitPercentage)
+		this.stepPercentage := Util.checkType(Percentage, stepPercentage)
+		this.splitPercentage := Util.checkType(Percentage, defaultSplitPercentage)
 	}
 
 	toString() {
@@ -246,8 +272,16 @@ class SplitPosition {
 	}
 
 	reset() {
-		Util.printDebugF('before reset: {}', () => [this.toString()])
-		this.splitPercentage := this.defaultSplitPercentage
+		Util.printDebug('reset')
+		return this.setSplitPercentage(this.defaultSplitPercentage)
+	}
+
+	setSplitPercentage(perc) {
+		Util.checkType(Percentage, perc)
+		oldSP := this.splitPercentage
+		this.splitPercentage := perc
+		Util.printDebugF('setSplitPercentage: {} → {}', () => [oldSP, this.toString()])
+		return oldSP
 	}
 
 	decrement() {
@@ -255,8 +289,8 @@ class SplitPosition {
 	}
 
 	increment(stepCount := 1) {
-		Util.printDebugF('before increment({}): {}', () => [stepCount, this.toString()])
-		this.splitPercentage := this.splitPercentage.addPercentage(this.stepPercentage, stepCount)
+		oldSP := this.splitPercentage
+		this.splitPercentage := this.splitPercentage.addPercentage(this.stepPercentage, Util.checkType(Integer, stepCount))
 		if (this.splitPercentage.lessThan(this.minSplitPercentage)) {
 			Util.printDebug('set to min')
 			this.splitPercentage := this.minSplitPercentage
@@ -265,7 +299,8 @@ class SplitPosition {
 			Util.printDebug('set to max')
 			this.splitPercentage := this.maxSplitPercentage
 		}
-		Util.printDebugF('after  increment({}): {}', () => [stepCount, this.toString()])
+		Util.printDebugF('increment({}): {} → {}', () => [stepCount, oldSP, this.toString()])
+		return oldSP
 	}
 
 	getChildPositions() {
@@ -297,8 +332,10 @@ class SplitPosition {
 	}
 }
 
-; Represents a percentage. But in order to be pixel accurate when parsed from an absolute value,
-; it stores the given value and reference (max) value.
+; Represents a percentage.
+; In order to be pixel accurate when parsed from an absolute value, it stores the given value and reference (max)
+; value. For example a 1000 pixel wide (horizontally split) screen's default split value configured as 600 is
+; represented as a Percentage with value 600 and max 1000.
 class Percentage {
 	__new(value, max) {
 		this.value := Number(value)

@@ -150,13 +150,6 @@ class Util {
 		return Number(val)
 	}
 
-	static requireStrLen(str, len) {
-		if (!(str is String) || strlen(str) !== len) {
-			throw ValueError(format("expected string of length {}, but got {}", len, strlen(str)))
-		}
-		return str
-	}
-
 	static findDiffIndex(array1, array2, elemEqualsPredicate) {
 		i := 1
 		while (i <= array1.length && i <= array2.length) {

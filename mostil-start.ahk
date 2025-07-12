@@ -49,8 +49,10 @@ hotkey("!f5", Mostil.start({
 	;   * the last character of the input bound to "resizeSplit" to reset all splits to their default values.
 	;   Further parameters: All subsequent valid inputs are treated as resizeSplit parameters, even if they
 	;   could also be the beginning of a new command.
-	; - "startComment", "endComment": do nothing. They are used to embed comments in a command
-	;   sequence to have a readable drop-down history.
+	; - "comment": do nothing. They are used to embed comments in a command sequence to have a readable drop-down
+	;   history. Its input actually configures two inputs: The character to start and the character to end a comment.
+	;   They may be equal (in which case no nested comments are possible). Two equal characters may also be written as
+	;   a single char string, e.g. `input: "/"` is equivalent to `input: "//"`.
 	;   Parameters: anything printable is allowed between start and end of comment
 	commands: [ ;
 		{ command: "comment", input: "[]" }, ;

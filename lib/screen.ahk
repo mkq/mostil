@@ -41,7 +41,8 @@ class Screen {
 
 	initGui_(app) {
 		Util.printDebug("init GUI for screen {}", this.toString())
-		g := Gui("+Theme", format('{} - screen "{}"', Mostil.LONG_PROGRAM_NAME, this.name))
+		captionOpt := this.hasInput() ? '' : ' -Caption'
+		g := Gui("+Theme" . captionOpt, format('{} - screen "{}"', Mostil.LONG_PROGRAM_NAME, this.name))
 
 		g.show()
 		WindowUtil.moveWindowToPos(g, this.guiPosition, app.errorHandler)

@@ -201,6 +201,7 @@ class Util {
 		return false
 	}
 }
+
 class Position {
 	__new(x, y, w, h) {
 		this.x := Util.checkType(Integer, x)

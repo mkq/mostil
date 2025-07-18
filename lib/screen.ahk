@@ -31,7 +31,7 @@ class Screen {
 		g.show()
 		WindowUtil.moveWindowToPos(g, this.guiPosition, app.errorHandler)
 		windowClientPos := Position.ofWindowClient(g)
-		splitPos := this.computeGuiSplitPos_()
+		splitPos := Screen.computeGuiSplitPos_(windowClientPos, this.targetSplitPosition)
 		groupBoxes := []
 		for i, tilePos in splitPos.getChildPositions() {
 			groupBoxes.push(g.addGroupBox(, this.tiles[i].name))
@@ -75,20 +75,20 @@ class Screen {
 		this.icons := icons
 	}
 
-	computeGuiSplitPos_() {
-		windowClientPos := Position.ofWindowClient(this.gui.gui)
-		windowRelativePos := Position(0, 0, windowClientPos.w, windowClientPos.h)
-		return SplitPosition(this.targetSplitPosition.horizontal,
+	static computeGuiSplitPos_(guiPosition, targetSplitPosition) {
+		windowRelativePos := Position(0, 0, guiPosition.w, guiPosition.h)
+		return SplitPosition(targetSplitPosition.horizontal,
 			windowRelativePos,
-			this.targetSplitPosition.defaultSplitPercentage,
-			this.targetSplitPosition.minSplitPercentage,
-			this.targetSplitPosition.maxSplitPercentage,
-			this.targetSplitPosition.stepPercentage)
+			targetSplitPosition.defaultSplitPercentage,
+			targetSplitPosition.minSplitPercentage,
+			targetSplitPosition.maxSplitPercentage,
+			targetSplitPosition.stepPercentage)
 	}
 
 	setSplitToPercentage(p, errorHandler) {
+		windowClientPos := Position.ofWindowClient(this.gui.gui)
 		this.targetSplitPosition.setSplitPercentage(Util.checkType(Percentage, p))
-		this.gui.splitPosition := this.computeGuiSplitPos_()
+		this.gui.splitPosition.setSplitPercentage(p)
 		this.updateTileGui_(errorHandler)
 	}
 
@@ -97,7 +97,7 @@ class Screen {
 	}
 
 	; Moves the split "towards" a tile given by index or resets it to the default position.
-	; @param tileIndex: 0 = reset; 1 = make tile 1 smaller and 2 bigger; 2 make tile 2 smaller and 1 bigger
+	; @param tileIndex: 0 = reset; 1 = make tile 1 smaller and 2 bigger; 2 = make tile 2 smaller and 1 bigger
 	moveSplit(errorHandler, tileIndex := 0) {
 		if (tileIndex == 0) {
 			oldPercentage := this.targetSplitPosition.reset()

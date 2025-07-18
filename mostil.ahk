@@ -55,7 +55,7 @@ class Mostil {
 				? this.cancel('focus lost') : 1)
 		this.errorHandler := msg => this.screensManager.screenWithInput.gui.statusBar.setText(msg)
 
-		this.pendingCommandParseResults := []
+		this.commandParseResults := []
 		this.submittable := true
 	}
 
@@ -68,8 +68,8 @@ class Mostil {
 		}
 		this.screensManager.hide()
 
-		while this.pendingCommandParseResults.length > 0 {
-			cpr := this.pendingCommandParseResults.removeAt(1)
+		while this.commandParseResults.length > 0 {
+			cpr := this.commandParseResults.removeAt(1)
 			Util.printDebug("submit {}", cpr)
 			cpr.command.submit(this.errorHandler)
 		}
@@ -83,8 +83,8 @@ class Mostil {
 
 	cancel(reasonMessage) {
 		Util.printDebug('cancel("{}")', reasonMessage)
-		while this.pendingCommandParseResults.length > 0 {
-			cpr := this.pendingCommandParseResults.removeAt(-1)
+		while this.commandParseResults.length > 0 {
+			cpr := this.commandParseResults.removeAt(-1)
 			Util.printDebug("undo {}", cpr)
 			cpr.command.undo(this.errorHandler)
 		}
@@ -94,48 +94,40 @@ class Mostil {
 
 	onValueChange() {
 		cmdStr := this.screensManager.screenWithInput.gui.input.text
-		Util.printDebug('__________ onValueChange("{}") __________', cmdStr)
-		newCommandPRs := this.parseCommands(cmdStr)
+		Util.printDebug('__________ onValueChange: "{}" __________', cmdStr)
+		global closeOnFocusLostAllowed := false
 		try {
-			this.handleCommandChange(newCommandPRs)
+			this.onValueChange_(cmdStr)
 		} finally {
-			this.pendingCommandParseResults := newCommandPRs
+			closeOnFocusLostAllowed := true
 		}
 	}
 
-	; TODO (Bug) Do not replace uncommitted Command instances with new ones, because it breaks undo.
-	; Example:
-	; - input: "-t" ⇒ instance 1, executePreview 1
-	; - input: "t" ⇒ "-tt" ⇒ instances [2, 3], executePreview 3
-	; - input: Backspace ⇒ "-t" ⇒ instance 4, undoes 3
-	; - input: Backspace ⇒ "-" ⇒ creates none, unparsed input "-", undoes 4
-	; So, 1 and 3 store undo data, but 3 and 4 are undone.
-	handleCommandChange(commandParseResults) {
-		Util.printDebug("handleCommandChange")
-		diffIndex := Util.findDiffIndex(this.pendingCommandParseResults, commandParseResults, (a, b) => a.input == b.input)
+	onValueChange_(cmdStr) {
+		newCPRs := this.parseCommands(cmdStr)
+		diffIndex := Util.findDiffIndex(this.commandParseResults, newCPRs, (a, b) => a.input == b.input)
+		Util.printDebug('diffIndex == {}', diffIndex)
 		if (diffIndex == 0) {
 			return
 		}
 
-		global closeOnFocusLostAllowed := false
-		try {
-			; undo pendingCommandParseResults which are not in commandParseResults:
-			loop this.pendingCommandParseResults.length - diffIndex + 1 {
-				cpr := this.pendingCommandParseResults.removeAt(-1)
-				Util.printDebug("undo {}", cpr)
-				cpr.command.undo(this.errorHandler)
-			}
-
-			; execute new commands:
-			i := diffIndex
-			while (i <= commandParseResults.length) {
-				cpr := commandParseResults[i++]
-				Util.printDebug("executePreview {}", cpr)
-				cpr.command.executePreview(this.errorHandler)
-			}
-		} finally {
-			closeOnFocusLostAllowed := true
+		; undo commandParseResults which are not in newCPRs:
+		loop this.commandParseResults.length - diffIndex + 1 {
+			cpr := this.commandParseResults.removeAt(-1)
+			Util.printDebug("undo {}", cpr)
+			cpr.command.undo(this.errorHandler)
 		}
+
+		; executePreview and store new commands:
+		i := diffIndex
+		while (i <= newCPRs.length) {
+			cpr := newCPRs[i++]
+			this.commandParseResults.push(cpr)
+			Util.printDebug("executePreview {}", cpr)
+			cpr.command.executePreview(this.errorHandler)
+		}
+		Util.printDebug('this.commandParseResults:')
+		Util.arrayMap(this.commandParseResults, cpr => Util.printDebug("- {}", cpr))
 	}
 
 	parseCommands(cmdStr) {
@@ -147,7 +139,7 @@ class Mostil {
 			prevLength := cprs.length
 			prevI := i
 			for (p in this.commandParsers) {
-				if (p.parse(cmdStr, this.pendingCommandParseResults, &i, cprs)) { ; p parsed something at i; continue with 1st parser at (already incremented) index
+				if (p.parse(cmdStr, this.commandParseResults, &i, cprs)) { ; p parsed something at i; continue with 1st parser at (already incremented) index
 					Util.printDebug("parsed `"{}`" (next index {} → {}) into {} commands. ⇒ All commands:",
 						cmdStr, prevI, i, cprs.length - prevLength)
 					Util.arrayMap(cprs, cpr => Util.printDebug("- {}", cpr))

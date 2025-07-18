@@ -15,7 +15,6 @@ setTitleMatchMode("RegEx")
 ; - allow screen to have an input key ("maximize" shortcut without moving the split to 0% or 100%)
 ; - for maximizing only: allow a screen without tiles, but with an input key
 ; - configurable size how many pixels or percent a window should overlap the split
-; - configurable max. number of windows to activate when undoing FocusWindowCommand
 ; - Add configurable command separator char? That would e.g. enable multiple focus commands even if a placeWindow input starts
 ;   with a char equal to a tile.
 ; - If any own window is activated, activate the one with input instead.
@@ -74,7 +73,7 @@ class Mostil {
 			cpr.command.submit(this.errorHandler)
 		}
 
-		input := this.screensManager.screenWithInput.gui.input
+		input := this.screensManager.screenWithInput.input
 		cmdStr := this.normalizeCommandString(input.value)
 		this.defaultInputs := Util.moveToOrInsertAt0(this.defaultInputs, cmdStr)
 		input.delete()
@@ -88,12 +87,12 @@ class Mostil {
 			Util.printDebug("undo {}", cpr)
 			cpr.command.undo(this.errorHandler)
 		}
-		this.screensManager.screenWithInput.gui.input.value := ""
+		this.screensManager.screenWithInput.input := ''
 		this.screensManager.hide()
 	}
 
 	onValueChange() {
-		cmdStr := this.screensManager.screenWithInput.gui.input.text
+		cmdStr := this.screensManager.screenWithInput.input.text
 		Util.printDebug('__________ onValueChange: "{}" __________', cmdStr)
 		global closeOnFocusLostAllowed := false
 		try {
@@ -131,6 +130,7 @@ class Mostil {
 	}
 
 	parseCommands(cmdStr) {
+		Util.checkType(String, cmdStr)
 		global submittable := true
 		this.screensManager.screenWithInput.gui.statusBar.setText("")
 		cprs := []

@@ -5,7 +5,8 @@ class ScreensManager {
 		}
 		this.screenWithInput := false
 		for s in screens {
-			if (s.hasInput()) {
+			Util.checkType(Screen, s)
+			if (s.hasInput) {
 				if (this.screenWithInput) {
 					throw ValueError("multiple GUIs with input")
 				} else {
@@ -57,7 +58,7 @@ class ScreensManager {
 
 	containsWindowId(windowId) {
 		for s in this.screens {
-			if (s.gui.hwnd == windowId) {
+			if (s.gui.gui.hwnd == windowId) {
 				return true
 			}
 		}

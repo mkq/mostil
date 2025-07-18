@@ -8,7 +8,8 @@ class Screen {
 			throw ValueError("tiles is not an array of length 2")
 		}
 		this.name := name
-		this.input := withInput
+		this.hasInput := withInput
+		Util.printDebug('hasInput: {}', this.hasInput)
 		this.targetSplitPosition := targetSplitPosition
 		this.guiPosition := guiPosition
 		this.tiles := tiles
@@ -22,9 +23,13 @@ class Screen {
 		return format('{}("{}", {})', type(this), this.name, String(this.targetSplitPosition))
 	}
 
+	input {
+		get => this.gui.input
+	}
+
 	initGui_(app) {
 		Util.printDebug("init GUI for screen {}", this.toString())
-		captionOpt := this.hasInput() ? '' : ' -Caption'
+		captionOpt := this.hasInput ? '' : ' -Caption'
 		g := Gui("+Theme" . captionOpt, format('{} - screen "{}"', Mostil.LONG_PROGRAM_NAME, this.name))
 		this.gui := { gui: g }
 
@@ -38,15 +43,15 @@ class Screen {
 		}
 		Screen.setGroupBoxSizes_(groupBoxes, splitPos)
 
-		input := false
+		inputControl := false
 		status := false
-		if (this.hasInput()) {
+		if (this.hasInput) {
 			g.onEvent("Close", (*) => exitApp())
 			buttonW := 50
 			inputW := min(500, windowClientPos.w)
-			input := g.addComboBox(format('w{} x{} y{} vCmd', inputW, (windowClientPos.w - inputW) / 2 - buttonW, windowClientPos.h / 2 - 20, []))
-			input.focus()
-			input.onEvent("Change", (*) => app.onValueChange())
+			inputControl := g.addComboBox(format('w{} x{} y{} vCmd', inputW, (windowClientPos.w - inputW) / 2 - buttonW, windowClientPos.h / 2 - 20, []))
+			inputControl.focus()
+			inputControl.onEvent("Change", (*) => app.onValueChange())
 			okButton := g.addButton(format('Default w{} x+0', buttonW), "OK")
 			cancelButton := g.addButton(format('w{} x+0', buttonW), "Cancel")
 			reloadButton := g.addButton(format('w{} x+0', buttonW), "&Reload")
@@ -67,7 +72,7 @@ class Screen {
 		this.gui := {
 			splitPosition: splitPos,
 			gui: g,
-			input: input,
+			input: inputControl,
 			pictures: pics,
 			groupBoxes: groupBoxes,
 			statusBar: status
@@ -123,10 +128,6 @@ class Screen {
 			; TODO move tile texts
 		}
 		winRedraw(this.gui.gui) ; TODO Is gb.redraw() sufficient?
-	}
-
-	hasInput() {
-		return this.input
 	}
 
 	show(app) {

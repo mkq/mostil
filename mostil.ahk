@@ -38,7 +38,7 @@ class Mostil {
 	; Example: hotkey("!f5", Mostil.start({ … }))
 	static start(config) {
 		app := Mostil(config)
-		return (*) => app.screensManager.show(app)
+		return (*) => app.screensManager.show(app, msg => app.handleError_(msg))
 	}
 
 	__new(config) {
@@ -49,10 +49,11 @@ class Mostil {
 		this.closeOnFocusLostAllowed := true
 		this.defaultInputs := []
 		Util.DEBUG_OUTPUT := c.debug
-		onMessage(0x6, (wp, lp, msg, hwnd) => ; WM_ACTIVATE
-			(c.closeOnFocusLost && this.closeOnFocusLostAllowed && !wp && this.screensManager.containsWindowId(hwnd))
-				? this.cancel('focus lost') : 1)
-		this.errorHandler := msg => this.screensManager.screenWithInput.gui.statusBar.setText(msg)
+		if (c.closeOnFocusLost) {
+			onMessage(0x6, (wp, lp, msg, hwnd) => ; WM_ACTIVATE
+				this.closeOnFocusLostAllowed && !wp && this.screensManager.containsWindowId(hwnd)
+					? this.cancel('focus lost') : 1)
+		}
 
 		this.commandParseResults := []
 		this.submittable := true
@@ -70,7 +71,7 @@ class Mostil {
 		while this.commandParseResults.length > 0 {
 			cpr := this.commandParseResults.removeAt(1)
 			Util.printDebug("submit {}", cpr)
-			cpr.command.submit(this.errorHandler)
+			cpr.command.submit(msg => this.handleError_(msg))
 		}
 
 		input := this.screensManager.screenWithInput.input
@@ -85,9 +86,9 @@ class Mostil {
 		while this.commandParseResults.length > 0 {
 			cpr := this.commandParseResults.removeAt(-1)
 			Util.printDebug("undo {}", cpr)
-			cpr.command.undo(this.errorHandler)
+			cpr.command.undo(msg => this.handleError_(msg))
 		}
-		this.screensManager.screenWithInput.input := ''
+		this.screensManager.screenWithInput.input.value := ''
 		this.screensManager.hide()
 	}
 
@@ -114,7 +115,7 @@ class Mostil {
 		loop this.commandParseResults.length - diffIndex + 1 {
 			cpr := this.commandParseResults.removeAt(-1)
 			Util.printDebug("undo {}", cpr)
-			cpr.command.undo(this.errorHandler)
+			cpr.command.undo(msg => this.handleError_(msg))
 		}
 
 		; executePreview and store new commands:
@@ -123,7 +124,7 @@ class Mostil {
 			cpr := newCPRs[i++]
 			this.commandParseResults.push(cpr)
 			Util.printDebug("executePreview {}", cpr)
-			cpr.command.executePreview(this.errorHandler)
+			cpr.command.executePreview(this.screensManager, msg => this.handleError_(msg))
 		}
 		Util.printDebug('this.commandParseResults:')
 		Util.arrayMap(this.commandParseResults, cpr => Util.printDebug("- {}", cpr))
@@ -132,7 +133,7 @@ class Mostil {
 	parseCommands(cmdStr) {
 		Util.checkType(String, cmdStr)
 		global submittable := true
-		this.screensManager.screenWithInput.gui.statusBar.setText("")
+		this.handleError_("")
 		cprs := []
 		i := 1, len := strlen(cmdStr)
 		while (i <= len) {
@@ -140,7 +141,7 @@ class Mostil {
 			prevI := i
 			for (p in this.commandParsers) {
 				if (p.parse(cmdStr, this.commandParseResults, &i, cprs)) { ; p parsed something at i; continue with 1st parser at (already incremented) index
-					Util.printDebug("parsed `"{}`" (next index {} → {}) into {} commands. ⇒ All commands:",
+					Util.printDebug("parsed `"{}`" part (next index {} → {}) into {} commands. ⇒ All commands:",
 						cmdStr, prevI, i, cprs.length - prevLength)
 					Util.arrayMap(cprs, cpr => Util.printDebug("- {}", cpr))
 					break
@@ -150,7 +151,7 @@ class Mostil {
 				global submittable := false
 				msg := format("Invalid or incomplete input starting at index {}: {}", prevI - 1, substr(cmdStr, i))
 				Util.printDebug(msg)
-				this.screensManager.screenWithInput.gui.statusBar.setText(msg)
+				this.handleError_(msg)
 				break
 			}
 		}
@@ -160,5 +161,11 @@ class Mostil {
 	normalizeCommandString(cmdStr) {
 		; TODO
 		return cmdStr " [" A_NOW "]"
+	}
+
+	handleError_(msg) {
+		msg := String(msg)
+		Util.printDebug('handleError("{}")', msg)
+		this.screensManager.screenWithInput.gui.statusBar.setText(msg)
 	}
 }

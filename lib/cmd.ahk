@@ -22,7 +22,7 @@ class Command {
 
 	; Executes this command, but only so far that it can be undone.
 	; Other actions are deferred until submit().
-	executePreview(errorHandler) {
+	executePreview(screensMgr, errorHandler) {
 		throw Error("must be overridden")
 	}
 

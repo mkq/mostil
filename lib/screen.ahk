@@ -3,6 +3,13 @@
 
 ; An area split vertically or horizontally, thereby consisting of two Tiles.
 class Screen {
+	static ICON_COUNT {
+		get => 6
+	}
+	static MAX_ICON_SIZE {
+		get => 256
+	}
+
 	__new(name, targetSplitPosition, guiPosition, withInput, tiles) {
 		if !(tiles is Array && tiles.length == 2) {
 			throw ValueError("tiles is not an array of length 2")
@@ -27,14 +34,14 @@ class Screen {
 		get => this.gui.input
 	}
 
-	initGui_(app) {
+	initGui_(app, errorHandler) {
 		Util.printDebug("init GUI for screen {}", this.toString())
 		captionOpt := this.hasInput ? '' : ' -Caption'
-		g := Gui("+Theme" . captionOpt, format('{} - screen "{}"', Mostil.LONG_PROGRAM_NAME, this.name))
+		g := Gui("+Theme -DPIScale" . captionOpt, format('{} - screen "{}"', Mostil.LONG_PROGRAM_NAME, this.name))
 		this.gui := { gui: g }
 
 		g.show()
-		WindowUtil.moveWindowToPos(g, this.guiPosition, app.errorHandler)
+		WindowUtil.moveWindowToPos(g, this.guiPosition, errorHandler)
 		windowClientPos := Position.ofWindowClient(g)
 		splitPos := Screen.computeGuiSplitPos_(windowClientPos, this.targetSplitPosition)
 		groupBoxes := []
@@ -47,9 +54,12 @@ class Screen {
 		status := false
 		if (this.hasInput) {
 			g.onEvent("Close", (*) => exitApp())
-			buttonW := 50
-			inputW := min(500, windowClientPos.w)
-			inputControl := g.addComboBox(format('w{} x{} y{} vCmd', inputW, (windowClientPos.w - inputW) / 2 - buttonW, windowClientPos.h / 2 - 20, []))
+			buttonW := 80
+			inputW := min(600, windowClientPos.w)
+			inputControl := g.addComboBox(format('w{} x{} y{} vCmd',
+				inputW,
+				(windowClientPos.w - inputW - 3 * buttonW) / 2,
+				windowClientPos.h / 2 - 20))
 			inputControl.focus()
 			inputControl.onEvent("Change", (*) => app.onValueChange())
 			okButton := g.addButton(format('Default w{} x+0', buttonW), "OK")
@@ -63,9 +73,16 @@ class Screen {
 		g.onEvent("Close", (*) => app.cancel('window closed'))
 		g.onEvent("Escape", (*) => app.cancel('escape'))
 
-		pics := Util.arrayMap(this.tiles, t => g.addPicture(Screen.iconPos_(groupBoxes[t.index]).toGuiOption(), A_AHKPATH))
-		icons := Util.arrayMap(pics, p => Icon(p))
-		Util.arrayMap(icons, i => i.updatePicture()) ; clear dummy icon from picture
+		pics := []
+		for ti, t in this.tiles {
+			tilePics := []
+			for j in Util.seq(Screen.ICON_COUNT) {
+				p := g.addPicture(Screen.iconPos_(groupBoxes[ti], ti).toGuiOption(), A_AHKPATH)
+				p.visible := false ; clear dummy picture
+				tilePics.push(p)
+			}
+			pics.push(tilePics)
+		}
 
 		; TODO add tile texts
 
@@ -73,11 +90,10 @@ class Screen {
 			splitPosition: splitPos,
 			gui: g,
 			input: inputControl,
-			pictures: pics,
+			pictures: pics, ; 2-element array (one per tile) of ICON_COUNT-element arrays
 			groupBoxes: groupBoxes,
 			statusBar: status
 		}
-		this.icons := icons
 	}
 
 	static computeGuiSplitPos_(guiPosition, targetSplitPosition) {
@@ -121,18 +137,20 @@ class Screen {
 
 	updateTileGui_(errorHandler) {
 		Screen.setGroupBoxSizes_(this.gui.groupBoxes, this.gui.splitPosition)
-		for i, p in this.gui.pictures {
+		for i, pics in this.gui.pictures {
 			gb := this.gui.groupBoxes[i]
-			WindowUtil.moveWindowToPos(p, Screen.iconPos_(gb), errorHandler)
-			;gb.redraw()
-			; TODO move tile texts
+			for j, pic in pics {
+				WindowUtil.moveWindowToPos(pic, Screen.iconPos_(gb, j), errorHandler)
+				; gb.redraw()
+				; TODO move tile texts
+			}
 		}
 		winRedraw(this.gui.gui) ; TODO Is gb.redraw() sufficient?
 	}
 
-	show(app) {
+	show(app, errorHandler) {
 		if (!this.gui) {
-			this.initGui_(app)
+			this.initGui_(app, errorHandler)
 		}
 		this.gui.gui.show()
 	}
@@ -152,9 +170,11 @@ class Screen {
 		; TODO
 	}
 
-	static iconPos_(gb) {
-		; TODO make icons square and limit size
-		return Position.ofGuiControl(gb).center(1 / 12)
+	static iconPos_(gb, i) {
+		p := Position.ofGuiControl(gb).center(1 / 12)
+		p.x := 10 + 20 * i
+		p.h := p.w := min(p.h, p.w, Screen.MAX_ICON_SIZE) ; make square & limit size
+		return p
 	}
 
 	static setGroupBoxSizes_(groupBoxes, splitPosition) {

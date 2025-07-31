@@ -1,6 +1,7 @@
 #include %A_SCRIPTDIR%/lib/cmd.ahk
 #include %A_SCRIPTDIR%/lib/util.ahk
 #include %A_SCRIPTDIR%/lib/window-util.ahk
+#include %A_SCRIPTDIR%/lib/icon.ahk
 
 class PlaceWindowCommandParser extends CommandParser {
 	static parseConfig(config, screensManager) {
@@ -67,15 +68,14 @@ class PlaceWindowCommand extends Command {
 		this.screensManager := screensManager
 
 		this.windowId := 0
-		this.oldTileText := selectedTile ? selectedTile.text : false
-		this.oldTileIcon := selectedTile ? selectedTile.icon.internalFormat : false
+		this.moveWindowUndoFunc := Util.NOP
 	}
 
 	toString() {
 		return format("{}({}, {})", super.toString(), this.windowSpec.name, String(this.selectedTile))
 	}
 
-	executePreview(errorHandler) {
+	executePreview(screensMgr, errorHandler) {
 		if (this.windowSpec.criteria) {
 			this.windowId := winExist(this.windowSpec.criteria)
 			Util.printDebug('window for {}: {}', this.windowSpec.criteria, this.windowId)
@@ -103,20 +103,19 @@ class PlaceWindowCommand extends Command {
 				Util.printDebug('non-existing, no launch command => do nothing')
 				return
 			}
-			this.oldTileText := this.selectedTile.text := this.windowSpec.launchCommand " (pending launch)"
-			this.oldTileIcon := this.selectedTile.icon.setToFile(this.defaultPreviewIcon.file, this.defaultPreviewIcon.index)
+			tw := Tile.Window(0,
+				Icon.fromFile(this.defaultPreviewIcon.file, this.defaultPreviewIcon.index),
+				this.windowSpec.launchCommand " (pending launch)")
+			this.moveWindowUndoFunc := screensMgr.moveWindowToTile(tw, this.selectedTile, errorHandler)
 		} else if (this.selectedTile) {
-			this.oldTileText := this.selectedTile.text := "window " this.windowId
-			this.oldTileIcon := this.selectedTile.icon.setToHandle(WindowUtil.getWindowIcon(this.windowId))
+			tw := Tile.Window(this.windowId,
+				Icon.fromHandle(WindowUtil.getWindowIcon(this.windowId)),
+				"window " this.windowId)
+			this.moveWindowUndoFunc := screensMgr.moveWindowToTile(tw, this.selectedTile, errorHandler)
 		}
 	}
 
 	submit(errorHandler) {
-		if (this.selectedTile) {
-			this.selectedTile.text := this.oldTileText
-			this.selectedTile.icon.internalFormat := this.oldTileIcon
-		}
-
 		if (!this.windowId) {
 			Util.printDebug('run: {}', this.windowSpec.launchCommand)
 			run(this.windowSpec.launchCommand)
@@ -125,22 +124,21 @@ class PlaceWindowCommand extends Command {
 			Util.printDebug('winWait returned {}', this.windowId)
 
 			if (!this.windowId) {
-				this.screensManager.screenWithInput.gui.statusBar.setText(format('WARN: running {} did not yield a window matching {}',
-					this.windowSpec.launchCommand, this.windowSpec.criteria))
+				errorHandler(format('WARN: running {} did not yield a window matching {}', this.windowSpec.launchCommand, this.windowSpec.criteria))
 				return
 			}
 		}
 
 		if (this.selectedTile) {
-			this.selectedTile.addWindow(this.windowId, this.screensManager, errorHandler)
+			this.selectedTile.moveLatestWindow(errorHandler)
 		}
 		winActivate(this.windowId)
 	}
 
 	undo(errorHandler) {
-		if (this.selectedTile) {
-			this.selectedTile.text := this.oldTileText
-			this.selectedTile.icon.internalFormat := this.oldTileIcon
+		if (this.moveWindowUndoFunc) {
+			this.moveWindowUndoFunc()
+			this.moveWindowUndoFunc := Util.NOP
 		}
 	}
 }

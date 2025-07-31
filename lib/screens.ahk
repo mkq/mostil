@@ -19,8 +19,8 @@ class ScreensManager {
 
 	; TODO refactor: Pass less than the full Mostil app.
 	; Or move all ScreensManager functionality inside class Mostil.
-	show(app) {
-		this.forEachScreenInputScreenLast(s => s.show(app))
+	show(app, errorHandler) {
+		this.forEachScreenInputScreenLast(s => s.show(app, errorHandler))
 	}
 
 	hide() {
@@ -54,6 +54,16 @@ class ScreensManager {
 			}
 		}
 		return results
+	}
+
+	moveWindowToTile(window, selectedTile, errorHandler) {
+		undoFunctions := this.forEachTile(t => t == selectedTile ? t.addWindow(window) : t.removeWindow(window))
+		undo() {
+			while (undoFunctions.length > 0) {
+				undoFunctions.removeAt(-1).call()
+			}
+		}
+		return undo
 	}
 
 	containsWindowId(windowId) {

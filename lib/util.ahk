@@ -23,6 +23,9 @@ class Util {
 		}
 	}
 
+	static NOP() {
+	}
+
 	; Checks a value's type
 	; @param requiredType a Class or a type name as string or "Boolean"
 	; @return value
@@ -117,15 +120,19 @@ class Util {
 		}
 	}
 
-	static arrayIndexOf(array, elem, startIndex := 1) {
+	static arrayIndexOfWhere(array, predicate, startIndex := 1) {
 		i := startIndex
 		while (i <= array.length) {
-			if (array[i] == elem) {
+			if (predicate.call(array[i])) {
 				return i
 			}
 			i++
 		}
 		return 0
+	}
+
+	static arrayIndexOf(array, elem, startIndex := 1) {
+		return Util.arrayIndexOfWhere(array, x => x == elem, startIndex)
 	}
 
 	static arrayMap(array, f) {
@@ -136,6 +143,38 @@ class Util {
 			results.push(result)
 		}
 		return results
+	}
+
+	; An Integer enumerator.
+	; When called with a single parameter, it starts at 1 and ends at the parameter (inclusive).
+	; Otherwise, it starts at the 1st parameter and ends at the 2nd (inclusive).
+	static seq(arg1, arg2 := '') {
+		if (arg2 == '') {
+			i := 1
+			max := Integer(arg1)
+		} else {
+			i := Integer(arg1)
+			max := Integer(arg2)
+		}
+		if (i <= max) {
+			enum(&out) {
+				if (i <= max) {
+					out := i++
+					return true
+				}
+				return false
+			}
+			return enum
+		} else {
+			enumDesc(&out) {
+				if (i >= max) {
+					out := i--
+					return true
+				}
+				return false
+			}
+			return enumDesc
+		}
 	}
 
 	static charAt(str, index) {

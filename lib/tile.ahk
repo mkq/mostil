@@ -7,27 +7,11 @@ class Tile {
 		this.name := name
 		this.input := input
 		this.screen := false
-		; TODO Array of { windowId, icon, text }
-		; ⇒ When PlaceWindowCommand moves a window currently in this Tile to another, this Tile can show the
-		; last remaining window's icon & text.
-		this.windowIds := Map() ; a set of window IDs represented as Map windowId -> true
-		this.text_ := ""
+		this.windows := [] ; array of Tile.Window
 	}
 
 	toString() {
-		return format("{} [{}] of {}", type(this), this.index, this.screen.toString())
-	}
-
-	text {
-		get => this.text_
-		set => this.text_ := value
-	}
-
-	; A Tile has a real icon and text only temporarily when PlaceWindowCommand sets it to show
-	; a preview of its action. However, this is implemented as an always present Icon instance
-	; which can also (and initially does) represent a null Icon:
-	icon {
-		get => this.screen.icons[this.index]
+		return format("{} [{}] of {}", type(this), this.index, this.screen.name)
 	}
 
 	; Moves the parent screen's split in the direction corresponding to this tile, making this tile smaller and the sibling
@@ -40,30 +24,57 @@ class Tile {
 	; Also deletes remembered window IDs which no longer exist.
 	setPosition(windowPos, errorHandler) {
 		this.pos := windowPos
-		for (wid in this.windowIds) {
+		for (wid in this.windows) {
 			if (winExist(wid)) {
 				WindowUtil.moveWindowToPos(wid, windowPos, errorHandler)
 			} else {
-				this.windowIds.delete(wid)
+				this.windows.delete(wid)
 			}
 		}
 	}
 
 	containsWindow(windowId) {
-		return this.windowIds.has(windowId)
+		return this.indexOfWindow(windowId) > 0
 	}
 
-	addWindow(windowId, screensManager, errorHandler) {
-		if (this.containsWindow(windowId)) {
-			return
+	indexOfWindow(windowId) {
+		return Util.arrayIndexOfWhere(this.windows, x => x.id == windowId)
+	}
+
+	addWindow(window) {
+		removeUndo := this.removeWindow(window.id)
+		this.windows.push(window)
+		undo() {
+			this.windows.removeAt(-1)
+			removeUndo()
 		}
-		if (this.screen.moveWindowToTileIndex(windowId, this.index, errorHandler)) {
-			screensManager.forEachTile(t => t.removeWindow(windowId)) ; remove from all tiles
-			this.windowIds.set(windowId, true)
-		}
+		return undo
 	}
 
 	removeWindow(windowId) {
-		this.windowIds.delete(windowId)
+		i := Util.arrayIndexOfWhere(this.windows, x => x.id == windowId)
+		if (i <= 0) {
+			return Util.NOP
+		}
+		window := this.windows.delete(i)
+		undo() {
+			this.windows.insertAt(i, window)
+		}
+		return undo
+	}
+
+	moveLatestWindow(errorHandler) {
+		if (this.windows.length > 0) {
+			this.screen.moveWindowToTileIndex(this.windows.get(-1).id, this.index, errorHandler)
+		}
+	}
+
+	; info about a window placed inside a Tile
+	class Window {
+		__new(id, ico, text) {
+			this.id := Util.checkType(Integer, id)
+			this.icon := Util.checkType(Icon, ico)
+			this.text := Util.checkType(String, text)
+		}
 	}
 }

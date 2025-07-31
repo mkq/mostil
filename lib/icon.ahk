@@ -1,53 +1,51 @@
 #include %A_SCRIPTDIR%/lib/util.ahk
 
-; an icon which draws itself to a given Picture control
+; An icon which can be set via a handle or file
 class Icon {
-	__new(pic) {
-		this.picture := pic
-		this.file := ""
-		this.index := 1
-		this.handle := 0
+	__new(filename, index, handle) {
+		this.filename := filename
+		this.index := index
+		this.handle := handle
+	}
+
+	static fromFile(filename, index := 1) {
+		return Icon(filename, index, 0)
+	}
+
+	static fromHandle(hIcon) {
+		return Icon('', 0, hIcon)
 	}
 
 	guiAddOption {
-		get => strlen(this.file) > 0 && this.index ? ("Icon" this.index) : false
+		get => strlen(this.filename) > 0 && this.index ? ("Icon" this.index) : false
 	}
 	guiAddArg {
-		get => strlen(this.file) > 0 ? this.file : this.handle ? ("hicon" this.handle) : false
+		get => strlen(this.filename) > 0 ? this.filename : this.handle ? ("hicon" this.handle) : false
 	}
+
 	; can be used to save and restore the current state, but uses an internal unspecified format:
 	internalFormat {
-		get => { file: this.file, index: this.index, handle: this.handle }
+		get => { filename: this.filename, index: this.index, handle: this.handle }
 		set {
-			this.file := Util.getProp(value, "file", "")
+			this.filename := Util.getProp(value, "filename", "")
 			this.index := Util.getProp(value, "index", 1)
 			this.handle := Util.getProp(value, "handle", 0)
-			this.updatePicture()
 		}
 	}
 
-	updatePicture() {
+	; Draws this icon on a given Picture control
+	updatePicture(pic) {
 		if (this.handle) {
 			Util.printDebug('updatePicture: handle {}', this.handle)
-			this.picture.value := 'HICON:' this.handle
-			this.picture.visible := true
-		} else if (this.file != '') {
-			Util.printDebug('updatePicture: file {}, index {}', this.file, this.index)
-			this.picture.value := format('*icon{} {}', this.index, this.file)
-			this.picture.visible := true
+			pic.value := 'HICON:' this.handle
+			pic.visible := true
+		} else if (this.filename != '') {
+			Util.printDebug('updatePicture: file {}, index {}', this.filename, this.index)
+			pic.value := format('*icon{} {}', this.index, this.filename)
+			pic.visible := true
 		} else {
 			Util.printDebug('updatePicture: hide')
-			this.picture.visible := false
+			pic.visible := false
 		}
-	}
-
-	setToFile(file, index := 1) {
-		this.internalFormat := { file: file, index: index }
-		this.updatePicture()
-	}
-
-	setToHandle(hIcon) {
-		this.internalFormat := { handle: hIcon }
-		this.updatePicture()
 	}
 }

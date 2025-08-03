@@ -24,13 +24,12 @@ class Tile {
 	; Also deletes remembered window IDs which no longer exist.
 	setPosition(windowPos, errorHandler) {
 		this.pos := windowPos
-		for (wid in this.windows) {
-			if (winExist(wid)) {
-				WindowUtil.moveWindowToPos(wid, windowPos, errorHandler)
-			} else {
-				this.windows.delete(wid)
+		for (w in this.windows) {
+			if (winExist(w.id)) {
+				WindowUtil.moveWindowToPos(w, windowPos, errorHandler)
 			}
 		}
+		this.windows := Util.arrayDeleteWhere(this.windows, w => !winExist(w.id))
 	}
 
 	containsWindow(windowId) {
@@ -42,6 +41,7 @@ class Tile {
 	}
 
 	addWindow(window) {
+		Util.checkType(Tile.Window, window)
 		removeUndo := this.removeWindow(window.id)
 		this.windows.push(window)
 		undo() {
@@ -53,19 +53,20 @@ class Tile {
 
 	removeWindow(windowId) {
 		i := Util.arrayIndexOfWhere(this.windows, x => x.id == windowId)
-		if (i <= 0) {
-			return Util.NOP
+		if (i > 0) {
+			window := this.windows.delete(i)
 		}
-		window := this.windows.delete(i)
 		undo() {
-			this.windows.insertAt(i, window)
+			if (i > 0) {
+				this.windows.insertAt(i, window)
+			}
 		}
 		return undo
 	}
 
 	moveLatestWindow(errorHandler) {
 		if (this.windows.length > 0) {
-			this.screen.moveWindowToTileIndex(this.windows.get(-1).id, this.index, errorHandler)
+			this.screen.moveWindowToTileIndex(this.windows[-1].id, this.index, errorHandler)
 		}
 	}
 

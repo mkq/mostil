@@ -36,8 +36,7 @@ class Screen {
 
 	initGui_(app, errorHandler) {
 		Util.printDebug("init GUI for screen {}", this.toString())
-		captionOpt := this.hasInput ? '' : ' -Caption'
-		g := Gui("+Theme -DPIScale" . captionOpt, format('{} - screen "{}"', Mostil.LONG_PROGRAM_NAME, this.name))
+		g := Gui("+Theme -DPIScale -Caption", format('{} - screen "{}"', app.name, this.name))
 		this.gui := { gui: g }
 
 		g.show()

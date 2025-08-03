@@ -69,5 +69,6 @@ hotkey("!f5", Mostil.start({
 		{ command: "placeWindow", input: "xxx", name: "Test 3", run: "mintty.exe --class=Test3 -t 'Test 3' -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test3$" }, ;
 		{ command: "placeWindow", input: "xx", name: "Test 2", run: "mintty.exe --class=Test2 -t 'Test 2' -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test2$", previewIcon: '[184]shell32.dll' }, ;
 		{ command: "placeWindow", input: "x", name: "Test 1", run: "mintty.exe --class=Test1 -t 'Test 1' -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test1$", previewIcon: '[174]shell32.dll' }, ;
+		{ command: "placeWindow", input: "E", name: "Test (error: command does not yield matching window)", run: "mintty.exe --class=TestE -t 'Test Error' -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test_Error$", previewIcon: '[174]shell32.dll' }, ;
 	],
 }))

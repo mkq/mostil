@@ -6,7 +6,7 @@ class WindowUtil {
 			return winMove(pos.x, pos.y, pos.w, pos.h, windowId)
 		} catch Error as e {
 			if (errorHandler) {
-				errorHandler('ERROR moving window: ' e.message)
+				errorHandler('ERROR moving window ' windowId ': ' e.message)
 			} else {
 				throw e
 			}
@@ -22,7 +22,7 @@ class WindowUtil {
 			}
 		} catch Error as e {
 			if (errorHandler) {
-				errorHandler('ERROR moving window: ' e.message)
+				errorHandler('ERROR moving window' windowId ': ' e.message)
 			} else {
 				throw e
 			}

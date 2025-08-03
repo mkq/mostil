@@ -28,12 +28,6 @@ setTitleMatchMode("RegEx")
 ;   - "e^3^" => select window "e", wait 3s, focus back. => Can be used to briefly check a window.
 
 class Mostil {
-	; ____________________________________ init
-	static SHORT_PROGRAM_NAME := "Mostil"
-	static LONG_PROGRAM_NAME := Mostil.SHORT_PROGRAM_NAME " - Mostly tiling window layout manager"
-	static PAD_X := 5
-	static PAD_Y := 5
-
 	; Starts the app and returns a function which shows the GUI, intended to be called by a hotkey.
 	; Example: hotkey("!f5", Mostil.start({ … }))
 	static start(config) {
@@ -43,6 +37,7 @@ class Mostil {
 
 	__new(config) {
 		Util.printDebugF('{}.__new({})', () => [type(this), Util.dump(config)])
+		this.name := "Mostil - Mostly tiling window layout manager"
 		c := Configuration(config)
 		this.commandParsers := c.commandParsers
 		this.screensManager := c.screensManager
@@ -66,13 +61,14 @@ class Mostil {
 		if (!this.submittable) {
 			return
 		}
-		this.screensManager.hide()
 
 		while this.commandParseResults.length > 0 {
 			cpr := this.commandParseResults.removeAt(1)
 			Util.printDebug("submit {}", cpr)
 			cpr.command.submit(msg => this.handleError_(msg))
 		}
+
+		this.screensManager.hide()
 
 		input := this.screensManager.screenWithInput.input
 		cmdStr := this.normalizeCommandString(input.value)
@@ -167,5 +163,6 @@ class Mostil {
 		msg := String(msg)
 		Util.printDebug('handleError("{}")', msg)
 		this.screensManager.screenWithInput.gui.statusBar.setText(msg)
+		Util.showTooltip(msg, 3000, 0, 0)
 	}
 }

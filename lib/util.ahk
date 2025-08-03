@@ -120,10 +120,10 @@ class Util {
 		}
 	}
 
-	static arrayIndexOfWhere(array, predicate, startIndex := 1) {
+	static arrayIndexOfWhere(arr, predicate, startIndex := 1) {
 		i := startIndex
-		while (i <= array.length) {
-			if (predicate.call(array[i])) {
+		while (i <= arr.length) {
+			if (predicate.call(arr[i])) {
 				return i
 			}
 			i++
@@ -131,14 +131,24 @@ class Util {
 		return 0
 	}
 
-	static arrayIndexOf(array, elem, startIndex := 1) {
-		return Util.arrayIndexOfWhere(array, x => x == elem, startIndex)
+	static arrayIndexOf(arr, elem, startIndex := 1) {
+		return Util.arrayIndexOfWhere(arr, x => x == elem, startIndex)
 	}
 
-	static arrayMap(array, f) {
+	static arrayDeleteWhere(arr, predicate) {
+		result := []
+		for (elem in arr) {
+			if (!predicate(elem)) {
+				result.push(elem)
+			}
+		}
+		return result
+	}
+
+	static arrayMap(arr, f) {
 		withIndex := f.maxParams > 1
 		results := []
-		for i, elem in array {
+		for i, elem in arr {
 			result := withIndex ? f(i, elem) : f(elem)
 			results.push(result)
 		}
@@ -218,9 +228,9 @@ class Util {
 		return 0
 	}
 
-	static moveToOrInsertAt0(array, elem) {
+	static moveToOrInsertAt0(arr, elem) {
 		resultArray := [elem]
-		for e in array {
+		for e in arr {
 			if (e !== elem) {
 				resultArray.push(e)
 			}
@@ -238,6 +248,14 @@ class Util {
 			}
 		}
 		return false
+	}
+
+	static nextTooltipId_ := 1
+
+	static showTooltip(text, duration, x, y) {
+		id := Util.nextTooltipId_++
+		tooltip(text, x, y, id)
+		setTimer(() => tooltip(, , , id), -duration)
 	}
 }
 

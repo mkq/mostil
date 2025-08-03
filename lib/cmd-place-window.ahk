@@ -122,10 +122,12 @@ class PlaceWindowCommand extends Command {
 			Util.printDebug('waiting for window {}', this.windowSpec.criteria)
 			this.windowId := winWait(this.windowSpec.criteria, , 20)
 			Util.printDebug('winWait returned {}', this.windowId)
-
 			if (!this.windowId) {
 				errorHandler(format('WARN: running {} did not yield a window matching {}', this.windowSpec.launchCommand, this.windowSpec.criteria))
 				return
+			}
+			if (this.selectedTile) {
+				this.selectedTile.windows[-1].id := this.windowId
 			}
 		}
 
@@ -136,9 +138,7 @@ class PlaceWindowCommand extends Command {
 	}
 
 	undo(errorHandler) {
-		if (this.moveWindowUndoFunc) {
-			this.moveWindowUndoFunc()
-			this.moveWindowUndoFunc := Util.NOP
-		}
+		this.moveWindowUndoFunc()
+		this.moveWindowUndoFunc := Util.NOP
 	}
 }

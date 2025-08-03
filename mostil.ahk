@@ -129,7 +129,7 @@ class Mostil {
 	parseCommands(cmdStr) {
 		Util.checkType(String, cmdStr)
 		global submittable := true
-		this.handleError_("")
+		this.setStatusBarText_('')
 		cprs := []
 		i := 1, len := strlen(cmdStr)
 		while (i <= len) {
@@ -162,7 +162,11 @@ class Mostil {
 	handleError_(msg) {
 		msg := String(msg)
 		Util.printDebug('handleError("{}")', msg)
-		this.screensManager.screenWithInput.gui.statusBar.setText(msg)
+		this.setStatusBarText_(msg)
 		Util.showTooltip(msg, 3000, 0, 0)
+	}
+
+	setStatusBarText_(text) {
+		this.screensManager.screenWithInput.gui.statusBar.setText(text)
 	}
 }

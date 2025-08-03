@@ -49,13 +49,13 @@ class Tile {
 			removeUndo()
 		}
 		this.screen.windowInserted(this.index, this.windows, this.windows.length)
-		return undo
+		return (*) => undo()
 	}
 
 	removeWindow(windowId) {
 		i := Util.arrayIndexOfWhere(this.windows, x => x.id == windowId)
 		if (i <= 0) {
-			return () => {}
+			return (*) => {}
 		}
 		window := this.windows.removeAt(i)
 		this.screen.windowRemoved(this.index, this.windows, i)
@@ -63,7 +63,7 @@ class Tile {
 			this.windows.insertAt(i, window)
 			this.screen.windowInserted(this.index, this.windows, i)
 		}
-		return undo
+		return (*) => undo()
 	}
 
 	moveLatestWindow(errorHandler) {

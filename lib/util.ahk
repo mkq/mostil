@@ -250,9 +250,11 @@ class Util {
 	static nextTooltipId_ := 1
 
 	static showTooltip(text, duration, x, y) {
-		id := Util.nextTooltipId_++
-		tooltip(text, x, y, id)
-		setTimer(() => tooltip(, , , id), -duration)
+		if (Util.nextTooltipId_ > 20) {
+			return
+		}
+		tooltip(text, x, y, Util.nextTooltipId_++)
+		setTimer(() => tooltip(, , , --Util.nextTooltipId_), -duration)
 	}
 }
 

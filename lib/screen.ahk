@@ -87,7 +87,7 @@ class Screen {
 	windowInserted(tileIndex, windows, windowIndex) {
 		pictures := this.gui.pictures[tileIndex]
 		if (windowIndex > pictures.length) {
-			pos := Screen.iconPos_(this.gui.groupBoxes[tileIndex], tileIndex).toGuiOption()
+			pos := Screen.iconPos_(this.gui.groupBoxes[tileIndex], windowIndex).toGuiOption()
 			pic := this.gui.gui.addPicture(pos, A_AHKPATH)
 			pictures.insertAt(windowIndex, pic)
 		}
@@ -154,9 +154,11 @@ class Screen {
 	}
 
 	static iconPos_(parentControl, i) {
-		p := Position.ofGuiControl(parentControl).center(1 / 8)
-		p.x := 10 + 20 * i
-		p.h := p.w := min(p.h, p.w, Screen.MAX_ICON_SIZE) ; make square & limit size
+		pParent := Position.ofGuiControl(parentControl)
+		pCenter := pParent.center(1 / 8)
+		size := min(pCenter.h, pCenter.w, Screen.MAX_ICON_SIZE) ; make square & limit size
+		p := Position(pParent.x + 10 + 20 * i, pCenter.y, size, size)
+		Util.printDebugF('iconPos_({}, {}) == {}', () => [parentControl, i, p])
 		return p
 	}
 

@@ -28,7 +28,7 @@ hotkey("!f5", Mostil.start({
 		;Q: { x: -2560, y: -200, w: 2560, h: 2880, split: "v60%", grid: "10%", snap: ["30%", "70%"], inputs: ["h", "n"] },
 		;W: { x:     0, y:    0, w: 5120, h: 2160, split: "h38%", grid: "12%", snap: ["20%", "51%"], inputs: ["r", "t"] },
 		L: { x: 0, y: 0, w: 800, h: 600, split: "h38%", grid: "10%", snap: ["20%", "90%"], inputs: ["a", "b"] },
-		R: { x: 0, y: 600, w: 1600, h: 750, split: "v", grid: "7%", snap: ["25%", "75%"], inputs: ["c", "d"], ui: { input: true } },
+		R: { x: 0, y: 600, w: 1050, h: 750, split: "v", grid: "7%", snap: ["25%", "75%"], inputs: ["c", "d"], ui: { input: true } },
 		;F: { x:     0, y:    0, w: 3838, h: 2080, split: "v0",   inputs: ["↑", "f"], ui: { x: 2900, y: 1500, scale: 20 } },
 	},
 	; A command is selected by typing its input character sequence, immediately followed by as many

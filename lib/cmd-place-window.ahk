@@ -68,7 +68,7 @@ class PlaceWindowCommand extends Command {
 		this.screensManager := screensManager
 
 		this.windowId := 0
-		this.moveWindowUndoFunc := Util.NOP
+		this.moveWindowUndoFunc := () => {}
 	}
 
 	toString() {
@@ -139,6 +139,6 @@ class PlaceWindowCommand extends Command {
 
 	undo(errorHandler) {
 		this.moveWindowUndoFunc()
-		this.moveWindowUndoFunc := Util.NOP
+		this.moveWindowUndoFunc := () => {}
 	}
 }

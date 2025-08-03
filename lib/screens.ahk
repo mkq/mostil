@@ -64,7 +64,7 @@ class ScreensManager {
 				undoFunctions.removeAt(-1).call()
 			}
 		}
-		return undo
+		return (*) => undo()
 	}
 
 	containsWindowId(windowId) {

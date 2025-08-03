@@ -23,9 +23,6 @@ class Util {
 		}
 	}
 
-	static NOP() {
-	}
-
 	; Checks a value's type
 	; @param requiredType a Class or a type name as string or "Boolean"
 	; @return value
@@ -135,14 +132,14 @@ class Util {
 		return Util.arrayIndexOfWhere(arr, x => x == elem, startIndex)
 	}
 
-	static arrayDeleteWhere(arr, predicate) {
-		result := []
+	static arrayRemoveWhere(arr, predicate) {
+		resultArray := []
 		for (elem in arr) {
 			if (!predicate(elem)) {
-				result.push(elem)
+				resultArray.push(elem)
 			}
 		}
-		return result
+		return resultArray
 	}
 
 	static arrayMap(arr, f) {

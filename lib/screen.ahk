@@ -4,7 +4,7 @@
 ; An area split vertically or horizontally, thereby consisting of two Tiles.
 class Screen {
 	static ICON_COUNT {
-		get => 6
+		get => 8
 	}
 	static MAX_ICON_SIZE {
 		get => 256
@@ -72,26 +72,35 @@ class Screen {
 		g.onEvent("Close", (*) => app.cancel('window closed'))
 		g.onEvent("Escape", (*) => app.cancel('escape'))
 
-		pics := []
-		for ti, t in this.tiles {
-			tilePics := []
-			for j in Util.seq(Screen.ICON_COUNT) {
-				p := g.addPicture(Screen.iconPos_(groupBoxes[ti], ti).toGuiOption(), A_AHKPATH)
-				p.visible := false ; clear dummy picture
-				tilePics.push(p)
-			}
-			pics.push(tilePics)
-		}
-
-		; TODO add tile texts
-
 		this.gui := {
 			splitPosition: splitPos,
 			gui: g,
 			input: inputControl,
-			pictures: pics, ; 2-element array (one per tile) of ICON_COUNT-element arrays
+			; 2-element array (one per tile) of at most ICON_COUNT-element arrays.
+			; Grows as needed, but never shrinks, because class Gui has no method to remove a control.
+			pictures: [[], []],
 			groupBoxes: groupBoxes,
 			statusBar: status
+		}
+	}
+
+	windowInserted(tileIndex, windows, windowIndex) {
+		pictures := this.gui.pictures[tileIndex]
+		if (windowIndex > pictures.length) {
+			pos := Screen.iconPos_(this.gui.groupBoxes[tileIndex], tileIndex).toGuiOption()
+			pic := this.gui.gui.addPicture(pos, A_AHKPATH)
+			pictures.insertAt(windowIndex, pic)
+		}
+		for i in Util.seq(pictures.length, windowIndex) {
+			windows[i].icon.updatePicture(pictures[i])
+		}
+	}
+
+	windowRemoved(tileIndex, windows, windowIndex) {
+		pictures := this.gui.pictures[tileIndex]
+		for i in Util.seq(pictures.length, windowIndex) {
+			ico := i > windows.length ? Icon.blank() : windows[i].icon
+			ico.updatePicture(pictures[i])
 		}
 	}
 
@@ -103,17 +112,6 @@ class Screen {
 			targetSplitPosition.minSplitPercentage,
 			targetSplitPosition.maxSplitPercentage,
 			targetSplitPosition.stepPercentage)
-	}
-
-	setSplitToPercentage(p, errorHandler) {
-		windowClientPos := Position.ofWindowClient(this.gui.gui)
-		this.targetSplitPosition.setSplitPercentage(Util.checkType(Percentage, p))
-		this.gui.splitPosition.setSplitPercentage(p)
-		this.updateTileGui_(errorHandler)
-	}
-
-	resetSplit(errorHandler) {
-		return this.moveSplit(errorHandler)
 	}
 
 	; Moves the split "towards" a tile given by index or resets it to the default position.
@@ -134,6 +132,10 @@ class Screen {
 		return oldPercentage
 	}
 
+	resetSplit(errorHandler) {
+		return this.moveSplit(errorHandler)
+	}
+
 	updateTileGui_(errorHandler) {
 		Screen.setGroupBoxSizes_(this.gui.groupBoxes, this.gui.splitPosition)
 		for i, pics in this.gui.pictures {
@@ -147,6 +149,35 @@ class Screen {
 		winRedraw(this.gui.gui) ; TODO Is gb.redraw() sufficient?
 	}
 
+	updateWindowPositions() {
+		; TODO
+	}
+
+	static iconPos_(parentControl, i) {
+		p := Position.ofGuiControl(parentControl).center(1 / 8)
+		p.x := 10 + 20 * i
+		p.h := p.w := min(p.h, p.w, Screen.MAX_ICON_SIZE) ; make square & limit size
+		return p
+	}
+
+	static setGroupBoxSizes_(groupBoxes, splitPosition) {
+		for i, gbp in splitPosition.getChildPositions() {
+			controlMove(gbp.x, gbp.y, gbp.w, gbp.h, groupBoxes[i])
+		}
+	}
+
+	moveWindowToTileIndex(windowId, i, errorHandler) {
+		pos := this.targetSplitPosition.getChildPositions()[i]
+		return WindowUtil.moveWindowToPos(windowId, pos, errorHandler)
+	}
+
+	setSplitToPercentage(p, errorHandler) {
+		windowClientPos := Position.ofWindowClient(this.gui.gui)
+		this.targetSplitPosition.setSplitPercentage(Util.checkType(Percentage, p))
+		this.gui.splitPosition.setSplitPercentage(p)
+		this.updateTileGui_(errorHandler)
+	}
+
 	show(app, errorHandler) {
 		if (!this.gui) {
 			this.initGui_(app, errorHandler)
@@ -157,28 +188,6 @@ class Screen {
 	hide() {
 		if (this.gui) {
 			this.gui.gui.hide()
-		}
-	}
-
-	moveWindowToTileIndex(windowId, i, errorHandler) {
-		pos := this.targetSplitPosition.getChildPositions()[i]
-		return WindowUtil.moveWindowToPos(windowId, pos, errorHandler)
-	}
-
-	updateWindowPositions() {
-		; TODO
-	}
-
-	static iconPos_(gb, i) {
-		p := Position.ofGuiControl(gb).center(1 / 12)
-		p.x := 10 + 20 * i
-		p.h := p.w := min(p.h, p.w, Screen.MAX_ICON_SIZE) ; make square & limit size
-		return p
-	}
-
-	static setGroupBoxSizes_(groupBoxes, splitPosition) {
-		for i, gbp in splitPosition.getChildPositions() {
-			controlMove(gbp.x, gbp.y, gbp.w, gbp.h, groupBoxes[i])
 		}
 	}
 }

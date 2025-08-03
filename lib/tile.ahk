@@ -29,7 +29,7 @@ class Tile {
 				WindowUtil.moveWindowToPos(w, windowPos, errorHandler)
 			}
 		}
-		this.windows := Util.arrayDeleteWhere(this.windows, w => !winExist(w.id))
+		this.windows := Util.arrayRemoveWhere(this.windows, w => !winExist(w.id))
 	}
 
 	containsWindow(windowId) {
@@ -48,18 +48,20 @@ class Tile {
 			this.windows.removeAt(-1)
 			removeUndo()
 		}
+		this.screen.windowInserted(this.index, this.windows, this.windows.length)
 		return undo
 	}
 
 	removeWindow(windowId) {
 		i := Util.arrayIndexOfWhere(this.windows, x => x.id == windowId)
-		if (i > 0) {
-			window := this.windows.delete(i)
+		if (i <= 0) {
+			return () => {}
 		}
+		window := this.windows.removeAt(i)
+		this.screen.windowRemoved(this.index, this.windows, i)
 		undo() {
-			if (i > 0) {
-				this.windows.insertAt(i, window)
-			}
+			this.windows.insertAt(i, window)
+			this.screen.windowInserted(this.index, this.windows, i)
 		}
 		return undo
 	}

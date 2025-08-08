@@ -66,9 +66,9 @@ hotkey("!f5", Mostil.start({
 		{ command: "placeWindow", input: "T", name: "Task Manager", run: "taskmgr.exe", criteria: "Task Manager ahk_class i)^TaskManagerWindow$ ahk_exe i)\btaskmgr\." }, ;
 		{ command: "placeWindow", input: "da", name: "Deezer", criteria: "ahk_exe i)\bdeezer\." }, ;
 		{ command: "placeWindow", input: "db", name: "Vivaldi", run: "vivaldi.exe", criteria: "ahk_exe i)\bvivaldi\." }, ;
-		{ command: "placeWindow", input: "xxx", name: "Test 3", run: "mintty.exe --class=Test3 -t 'Test 3' -i shell32.dll,203 -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test3$" }, ;
-		{ command: "placeWindow", input: "xx", name: "Test 2 ", run: "mintty.exe --class=Test2 -t 'Test 2' -i shell32.dll,202 -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test2$", previewIcon: '[184]shell32.dll' }, ;
-		{ command: "placeWindow", input: "x", name: "Test 1  ", run: "mintty.exe --class=Test1 -t 'Test 1' -i shell32.dll,201 -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test1$", previewIcon: '[174]shell32.dll' }, ;
+		{ command: "placeWindow", input: "xxx", name: "Test 3", run: "mintty.exe --class=Test3 -t 'Test 3' -i c:/windows/system32/shell32.dll,203 -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test3$" }, ;
+		{ command: "placeWindow", input: "xx", name: "Test 2 ", run: "mintty.exe --class=Test2 -t 'Test 2' -i c:/windows/system32/shell32.dll,202 -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test2$", previewIcon: '[184]shell32.dll' }, ;
+		{ command: "placeWindow", input: "x", name: "Test 1  ", run: "mintty.exe --class=Test1 -t 'Test 1' -i c:/windows/system32/shell32.dll,201 -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test1$", previewIcon: '[174]shell32.dll' }, ;
 		{ command: "placeWindow", input: "E", name: "Test (error: command does not yield matching window)", run: "mintty.exe --class=TestE -t 'Test Error' -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test_Error$", previewIcon: '[174]shell32.dll' }, ;
 	],
 }))

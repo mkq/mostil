@@ -58,7 +58,8 @@ class ScreensManager {
 
 	moveWindowToTile(window, selectedTile, errorHandler) {
 		Util.checkType(Tile.Window, window)
-		undoFunctions := this.forEachTile(t => t == selectedTile ? t.addWindow(window) : t.removeWindow(window))
+		Util.checkType(Tile, selectedTile)
+		undoFunctions := this.forEachTile(t => t == selectedTile ? t.addWindow(window) : t.removeWindow(window.id))
 		undo() {
 			while (undoFunctions.length > 0) {
 				undoFunctions.removeAt(-1).call()

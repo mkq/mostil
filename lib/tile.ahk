@@ -42,10 +42,11 @@ class Tile {
 
 	addWindow(window) {
 		Util.checkType(Tile.Window, window)
+		; adding an already owned window should move it to the end, so remove and add
 		removeUndo := this.removeWindow(window.id)
 		this.windows.push(window)
 		undo() {
-			this.windows.removeAt(-1)
+			this.windows.removeAt(this.windows.length)
 			removeUndo()
 		}
 		this.screen.windowInserted(this.index, this.windows, this.windows.length)
@@ -53,6 +54,7 @@ class Tile {
 	}
 
 	removeWindow(windowId) {
+		Util.checkType(Integer, windowId)
 		i := Util.arrayIndexOfWhere(this.windows, x => x.id == windowId)
 		if (i <= 0) {
 			return (*) => {}

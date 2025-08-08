@@ -15,9 +15,9 @@ class CommentCommandParser extends CommandParser {
 		this.endCommentChars := endCommentChar
 	}
 
-	parse(cmdStr, pendingCommandParseResults, &i, commandParseResults) {
+	parse(cmdStr, &i, commandParseResults) {
 		if (Util.charAt(cmdStr, i) !== this.startCommentChar) {
-			return super.parse(cmdStr, pendingCommandParseResults, &i, commandParseResults)
+			return super.parse(cmdStr, &i, commandParseResults)
 		}
 		i++
 		depth := 1, len := strlen(cmdStr)

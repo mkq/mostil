@@ -235,26 +235,15 @@ class Util {
 		return resultArray
 	}
 
-	static parseTileParameter(cmdString, screensMgr, &i, &cmdStrPart) {
-		for s in screensMgr.screens {
-			for t in s.tiles {
-				if (Util.skip(cmdString, t.input, &i)) {
-					cmdStrPart := t.input
-					return t
-				}
-			}
-		}
-		return false
-	}
-
 	static nextTooltipId_ := 1
 
 	static showTooltip(text, duration, x, y) {
 		if (Util.nextTooltipId_ > 20) {
 			return
 		}
-		tooltip(text, x, y, Util.nextTooltipId_++)
-		setTimer(() => tooltip(, , , --Util.nextTooltipId_), -duration)
+		id := Util.nextTooltipId_++
+		tooltip(text, x, y, id)
+		setTimer(() => tooltip(, , , (Util.nextTooltipId_--, id)), -duration)
 	}
 }
 

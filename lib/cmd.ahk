@@ -1,10 +1,21 @@
 class CommandParser {
 	; @param cmdStr command string to parse
-	; @param pendingCommandParseResults array of pending CommandParseResults; TODO remove (see PlaceWindowCommandParser)
 	; @param i start index; will be incremented to point to the first position which was not understood by this parser
 	; @param commandParseResults CommandParseResult[] to which to append
 	; @return boolean whether successful
-	parse(cmdStr, pendingCommandParseResults, &i, commandParseResults) {
+	parse(cmdStr, &i, commandParseResults) {
+		return false
+	}
+
+	parseTileParameter(cmdString, screensMgr, &i, &cmdStrPart) {
+		for s in screensMgr.screens {
+			for t in s.tiles {
+				if (Util.skip(cmdString, t.input, &i)) {
+					cmdStrPart := t.input
+					return t
+				}
+			}
+		}
 		return false
 	}
 }
@@ -27,11 +38,11 @@ class Command {
 	}
 
 	; Called when the input that produced this command is deleted before it has been submitted.
-	undo(errorHandler) {
+	undo(screensMgr, errorHandler) {
 		throw Error("must be overridden")
 	}
 
-	submit(errorHandler) {
+	submit(screensMgr, errorHandler) {
 	}
 }
 

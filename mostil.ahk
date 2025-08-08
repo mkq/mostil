@@ -65,7 +65,7 @@ class Mostil {
 		while this.commandParseResults.length > 0 {
 			cpr := this.commandParseResults.removeAt(1)
 			Util.printDebug("submit {}", cpr)
-			cpr.command.submit(msg => this.handleError_(msg))
+			cpr.command.submit(this.screensManager, msg => this.handleError_(msg))
 		}
 
 		this.screensManager.hide()
@@ -82,7 +82,7 @@ class Mostil {
 		while this.commandParseResults.length > 0 {
 			cpr := this.commandParseResults.removeAt(-1)
 			Util.printDebug("undo {}", cpr)
-			cpr.command.undo(msg => this.handleError_(msg))
+			cpr.command.undo(this.screensManager, msg => this.handleError_(msg))
 		}
 		this.screensManager.screenWithInput.input.value := ''
 		this.screensManager.hide()
@@ -111,7 +111,7 @@ class Mostil {
 		loop this.commandParseResults.length - diffIndex + 1 {
 			cpr := this.commandParseResults.removeAt(-1)
 			Util.printDebug("undo {}", cpr)
-			cpr.command.undo(msg => this.handleError_(msg))
+			cpr.command.undo(this.screensManager, msg => this.handleError_(msg))
 		}
 
 		; executePreview and store new commands:
@@ -136,7 +136,7 @@ class Mostil {
 			prevLength := cprs.length
 			prevI := i
 			for (p in this.commandParsers) {
-				if (p.parse(cmdStr, this.commandParseResults, &i, cprs)) { ; p parsed something at i; continue with 1st parser at (already incremented) index
+				if (p.parse(cmdStr, &i, cprs)) { ; p parsed something at i; continue with 1st parser at (already incremented) index
 					Util.printDebug("parsed `"{}`" part (next index {} → {}) into {} commands. ⇒ All commands:",
 						cmdStr, prevI, i, cprs.length - prevLength)
 					Util.arrayMap(cprs, cpr => Util.printDebug("- {}", cpr))

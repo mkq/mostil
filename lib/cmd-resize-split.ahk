@@ -11,10 +11,10 @@ class ResizeSplitCommandParser extends CommandParser {
 		this.screensManager := screensMgr
 	}
 
-	parse(cmdStr, pendingCommandParseResults, &i, commandParseResults) {
+	parse(cmdStr, &i, commandParseResults) {
 		origI := i
 		if (!Util.skip(cmdStr, this.input, &i)) {
-			return super.parse(cmdStr, pendingCommandParseResults, &i, commandParseResults)
+			return super.parse(cmdStr, &i, commandParseResults)
 		}
 		resetChar := substr(this.input, -1)
 
@@ -40,7 +40,7 @@ class ResizeSplitCommandParser extends CommandParser {
 			return CommandParseResult(inputPrefix . resetChar, ResetSplitCommand(this.screensManager))
 		}
 		input := ""
-		t := Util.parseTileParameter(cmdStr, this.screensManager, &i, &input)
+		t := this.parseTileParameter(cmdStr, this.screensManager, &i, &input)
 		return t == false ? false : CommandParseResult(inputPrefix . input, ResizeSplitCommand(this.screensManager, t))
 	}
 }
@@ -62,11 +62,11 @@ class ResizeSplitCommand extends Command {
 		Util.printDebugF('oldSplitPercentage == {}', () => [this.oldSplitPercentage])
 	}
 
-	submit(errorHandler) {
+	submit(screensMgr, errorHandler) {
 		this.selectedTile.screen.updateWindowPositions()
 	}
 
-	undo(errorHandler) {
+	undo(screensMgr, errorHandler) {
 		Util.printDebugF('oldSplitPercentage == {}', () => [this.oldSplitPercentage])
 		this.selectedTile.screen.setSplitToPercentage(this.oldSplitPercentage, this.screensManager)
 	}
@@ -85,11 +85,11 @@ class ResetSplitCommand extends Command {
 		this.oldSplitPercentages := Util.checkType(Percentage, this.screensManager.forEachScreen(s => s.resetSplit()))
 	}
 
-	submit(errorHandler) {
+	submit(screensMgr, errorHandler) {
 		this.screensManager.forEachScreen(s => s.updateWindowPositions())
 	}
 
-	undo(errorHandler) {
+	undo(screensMgr, errorHandler) {
 		i := 0
 		this.screensManager.forEachScreen(s => s.setSplitToPercentage(this.oldSplitPercentages[++i]))
 	}

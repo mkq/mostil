@@ -44,6 +44,21 @@ class WindowUtil {
 		return results
 	}
 
+	; The most recently active window which does not belong to this app.
+	static getActiveOtherWindow(screensMgr) {
+		myWindowIds := Util.arrayMap(screensMgr.screens, s => s.gui.gui.hwnd)
+		Util.printDebugF('my window ids: {}', () => [Util.dump(myWindowIds)])
+		windowId := 0
+		for wid in WindowUtil.getNormalWindowIds() {
+			if (Util.arrayIndexOf(myWindowIds, wid) == 0) {
+				windowId := wid
+				break
+			}
+		}
+		Util.printDebug('MRU window: {}', windowId)
+		return windowId
+	}
+
 	; Actual sendMessage and GetClassLong logic and magic numbers taken from
 	; https://www.autohotkey.com/board/topic/116614-iswitchw-plus-groupedahk-alttab-replacement-window-switcher/
 	static getWindowIcon(winId) {

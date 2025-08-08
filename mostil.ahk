@@ -54,8 +54,6 @@ class Mostil {
 		this.submittable := true
 	}
 
-	; ____________________________________ core logic
-
 	submit() {
 		Util.printDebug("submit")
 		if (!this.submittable) {
@@ -89,7 +87,7 @@ class Mostil {
 	}
 
 	onValueChange() {
-		cmdStr := this.screensManager.screenWithInput.input.text
+		cmdStr := this.screensManager.screenWithInput.gui.input.text
 		Util.printDebug('__________ onValueChange: "{}" __________', cmdStr)
 		global closeOnFocusLostAllowed := false
 		try {

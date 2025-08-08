@@ -10,10 +10,21 @@ class Configuration {
 	__new(rawConfig) {
 		this.debug := Util.getProp(rawConfig, "debug", false)
 		this.closeOnFocusLost := Util.getProp(rawConfig, "closeOnFocusLost", true)
-		this.screensManager := Configuration.parseScreensConfig_(Util.getMandatoryProp(rawConfig, 'screens',
-			'no screens configured'))
+		screensRawConfig := Util.getMandatoryProp(rawConfig, 'screens', 'no screens configured')
+		guiConfig := Configuration.parseGuiConfig_(Util.getProp(rawConfig, 'gui', {}))
+		this.screensManager := Configuration.parseScreensConfig_(screensRawConfig, guiConfig)
 		this.commandParsers := Configuration.parseCommandsConfig_(rawConfig.commands, this.screensManager)
 		Util.printDebug("Configuration ctor end")
+	}
+
+	static parseGuiConfig_(rawConfig) {
+		return {
+			iconScale: Percentage.parse(Util.getProp(rawConfig, 'iconScale', '10%'), 100, 'iconScale'),
+			maxIconSize: Util.getProp(rawConfig, 'maxIconSize', 256),
+			maxIconCount: Util.getProp(rawConfig, 'maxIconCount', 10),
+			iconOffsetX: Util.getProp(rawConfig, 'iconOffsetX', 10),
+			iconDist: Util.getProp(rawConfig, 'iconDist', 32),
+		}
 	}
 
 	static parseCommandsConfig_(rawCommandsConfigs, screensManager) {
@@ -39,7 +50,7 @@ class Configuration {
 		return parsers
 	}
 
-	static parseScreensConfig_(rawConfigs, addInput := false) {
+	static parseScreensConfig_(rawConfigs, guiRawConfig, addInput := false) {
 		screens := []
 		tileInputs := []
 		for screenName, screenRawConfig in rawConfigs.ownProps() {
@@ -51,7 +62,7 @@ class Configuration {
 				}
 				screenRawConfig.ui.input := true
 			}
-			s := Configuration.parseScreenConfig_(screenName, screenRawConfig)
+			s := Configuration.parseScreenConfig_(screenName, screenRawConfig, guiRawConfig)
 			screens.push(s)
 			for t in s.tiles {
 				if (Util.arrayIndexOf(tileInputs, t.input) > 0) {
@@ -62,13 +73,13 @@ class Configuration {
 		}
 		sm := ScreensManager(screens)
 		if (!sm.screenWithInput) {
-			return Configuration.parseScreensConfig_(rawConfigs, true)
+			return Configuration.parseScreensConfig_(rawConfigs, guiRawConfig, true)
 		}
 
 		return sm
 	}
 
-	static parseScreenConfig_(name, rawConfig) {
+	static parseScreenConfig_(name, rawConfig, guiRawConfig) {
 		pos := Position(
 			Util.requireInteger(rawConfig.x, "screen x"),
 			Util.requireInteger(rawConfig.y, "screen y"),
@@ -117,7 +128,8 @@ class Configuration {
 			SplitPosition(horizontal, pos, defaultSplitPercentage, minSplitValue, maxSplitValue, splitStepSize),
 			uiConfig.position,
 			uiConfig.hasInput,
-			[tile1, tile2])
+			[tile1, tile2],
+			guiRawConfig)
 	}
 
 	static parseScreenUiConfig_(rawConfig, screenPos) {

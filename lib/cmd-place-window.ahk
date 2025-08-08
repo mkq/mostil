@@ -116,13 +116,12 @@ class PlaceWindowCommand extends Command {
 
 	executePreview(screensMgr, errorHandler) {
 		this.windowId := FocusWindowCommand.getWindowId_(this.windowSpec.criteria, this.screensManager)
-		tw := this.windowId ; selected window does not exist
-			? Tile.Window(this.windowId,
-				Icon.fromHandle(WindowUtil.getWindowIcon(this.windowId)),
-				"window " this.windowId)
-			: Tile.Window(0,
-				Icon.fromFile(this.defaultPreviewIcon.file, this.defaultPreviewIcon.index),
-				this.windowSpec.launchCommand " (pending launch)")
+		text := this.windowId ? ("window " this.windowId) : (this.windowSpec.launchCommand " (pending launch)")
+		ico := this.windowId && (hIcon := WindowUtil.getWindowIcon(this.windowId)) ? Icon.fromHandle(hIcon) : 0
+		if (!ico) {
+			ico := Icon.fromFile(this.defaultPreviewIcon.file, this.defaultPreviewIcon.index)
+		}
+		tw := Tile.Window(this.windowId, ico, text)
 		this.moveWindowUndoFunc := screensMgr.moveWindowToTile(tw, this.selectedTile, errorHandler)
 	}
 

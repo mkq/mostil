@@ -63,7 +63,7 @@ class ResizeSplitCommand extends Command {
 	}
 
 	submit(screensMgr, errorHandler) {
-		this.selectedTile.screen.updateWindowPositions()
+		this.selectedTile.screen.updateWindowPositions(errorHandler)
 	}
 
 	undo(screensMgr, errorHandler) {
@@ -86,7 +86,7 @@ class ResetSplitCommand extends Command {
 	}
 
 	submit(screensMgr, errorHandler) {
-		this.screensManager.forEachScreen(s => s.updateWindowPositions())
+		this.screensManager.forEachScreen(s => s.updateWindowPositions(errorHandler))
 	}
 
 	undo(screensMgr, errorHandler) {

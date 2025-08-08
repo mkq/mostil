@@ -7,7 +7,13 @@ traySetIcon("shell32.dll", 251)
 hotkey("!f5", Mostil.start({
 	debug: true,
 	closeOnFocusLost: false,
-	; hotkey to open the dialog:
+	gui: {
+		maxIconCount: 10,
+		iconScale: "20%",
+		maxIconSize: 256,
+		iconOffsetX: 10,
+		iconDist: 32,
+	},
 	; screens (or any screen area to manage): A map from screen name to config object. Config attributes:
 	; - x, y, w, h: coordinates (top left corner, width, height)
 	; - split: Each one is an area of two tiles, either "v" (top / bottom) or "h" (left / right).
@@ -27,8 +33,8 @@ hotkey("!f5", Mostil.start({
 	screens: {
 		;Q: { x: -2560, y: -200, w: 2560, h: 2880, split: "v60%", grid: "10%", snap: ["30%", "70%"], inputs: ["h", "n"] },
 		;W: { x:     0, y:    0, w: 5120, h: 2160, split: "h38%", grid: "12%", snap: ["20%", "51%"], inputs: ["r", "t"] },
-		L: { x: 0, y: 0, w: 800, h: 600, split: "h38%", grid: "10%", snap: ["20%", "90%"], inputs: ["a", "b"] },
-		R: { x: 0, y: 600, w: 1050, h: 750, split: "v", grid: "7%", snap: ["25%", "75%"], inputs: ["c", "d"], ui: { input: true } },
+		L: { x: 3040, y: 0, w: 800, h: 600, split: "h38%", grid: "10%", snap: ["20%", "90%"], inputs: ["a", "b"] },
+		R: { x: 2790, y: 600, w: 1050, h: 750, split: "v", grid: "7%", snap: ["25%", "75%"], inputs: ["c", "d"], ui: { input: true } },
 		;F: { x:     0, y:    0, w: 3838, h: 2080, split: "v0",   inputs: ["↑", "f"], ui: { x: 2900, y: 1500, scale: 20 } },
 	},
 	; A command is selected by typing its input character sequence, immediately followed by as many
@@ -67,8 +73,8 @@ hotkey("!f5", Mostil.start({
 		{ command: "placeWindow", input: "da", name: "Deezer", criteria: "ahk_exe i)\bdeezer\." }, ;
 		{ command: "placeWindow", input: "db", name: "Vivaldi", run: "vivaldi.exe", criteria: "ahk_exe i)\bvivaldi\." }, ;
 		{ command: "placeWindow", input: "xxx", name: "Test 3", run: "mintty.exe --class=Test3 -t 'Test 3' -i c:/windows/system32/shell32.dll,203 -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test3$" }, ;
-		{ command: "placeWindow", input: "xx", name: "Test 2 ", run: "mintty.exe --class=Test2 -t 'Test 2' -i c:/windows/system32/shell32.dll,202 -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test2$", previewIcon: '[184]shell32.dll' }, ;
-		{ command: "placeWindow", input: "x", name: "Test 1  ", run: "mintty.exe --class=Test1 -t 'Test 1' -i c:/windows/system32/shell32.dll,201 -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test1$", previewIcon: '[174]shell32.dll' }, ;
-		{ command: "placeWindow", input: "E", name: "Test (error: command does not yield matching window)", run: "mintty.exe --class=TestE -t 'Test Error' -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test_Error$", previewIcon: '[174]shell32.dll' }, ;
+		{ command: "placeWindow", input: "xx", name: "Test 2 ", run: "mintty.exe --class=Test2 -t 'Test 2' -i c:/windows/system32/shell32.dll,184 -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test2$", previewIcon: '[184]shell32.dll' }, ;
+		{ command: "placeWindow", input: "x", name: "Test 1  ", run: "mintty.exe --class=Test1 -t 'Test 1' -i c:/windows/system32/shell32.dll,174 -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test1$", previewIcon: '[174]shell32.dll' }, ;
+		{ command: "placeWindow", input: "E", name: "Test (error: command does not yield matching window)", run: "mintty.exe --class=TestE -t 'Test Error' -e sleep infinity", criteria: "ahk_exe i)\bmintty\. ahk_class i)^Test_Error$", previewIcon: '[175]shell32.dll' }, ;
 	],
 }))

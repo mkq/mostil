@@ -289,9 +289,13 @@ class Position {
 		return format('x{} y{} w{} h{}', this.x, this.y, this.w, this.h)
 	}
 
-	center(ratio) {
-		w := this.w * ratio
-		h := this.h * ratio
+	; @param perc a ratio between 0 and 1 or a Percentage
+	center(perc) {
+		if !(perc is Percentage) {
+			perc := Percentage(1000 * perc, 1000)
+		}
+		w := perc.applyTo(this.w)
+		h := perc.applyTo(this.h)
 		return Position.ofFloats(this.x + (this.w - w) / 2, this.y + (this.h - h) / 2, w, h)
 	}
 }
@@ -383,7 +387,7 @@ class SplitPosition {
 ; value. For example a 1000 pixel wide (horizontally split) screen's default split value configured as 600 is
 ; represented as a Percentage with value 600 and max 1000.
 class Percentage {
-	__new(value, max) {
+	__new(value, max := 100) {
 		this.value := Number(value)
 		this.max := Number(max)
 	}

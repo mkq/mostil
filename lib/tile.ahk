@@ -1,13 +1,14 @@
 #include %A_SCRIPTDIR%/lib/window-util.ahk
 
-; One "half" of a Screen
+; One "half" of a Screen.
+; This is a model class; the GUI is handled in class Screen.
 class Tile {
 	__new(index, name, input) {
 		this.index := index
 		this.name := name
 		this.input := input
 		this.screen := false
-		this.windows := [] ; array of Tile.Window
+		this.windows := [] ; array of Tile.Window, most recently added at [1]
 	}
 
 	toString() {
@@ -44,12 +45,14 @@ class Tile {
 		Util.checkType(Tile.Window, window)
 		; adding an already owned window should move it to the end, so remove and add
 		removeUndo := this.removeWindow(window.id)
-		this.windows.push(window)
+		this.windows.insertAt(1, window)
 		undo() {
-			this.windows.removeAt(this.windows.length)
+			if (this.windows.length > 0) {
+				this.windows.removeAt(1)
+			}
 			removeUndo()
 		}
-		this.screen.windowInserted(this.index, this.windows, this.windows.length)
+		this.windowsChanged_()
 		return (*) => undo()
 	}
 
@@ -60,17 +63,25 @@ class Tile {
 			return (*) => {}
 		}
 		window := this.windows.removeAt(i)
-		this.screen.windowRemoved(this.index, this.windows, i)
+		this.windowsChanged_()
 		undo() {
-			this.windows.insertAt(i, window)
-			this.screen.windowInserted(this.index, this.windows, i)
+			this.windows.insertAt(min(this.windows.length, i), window)
+			this.windowsChanged_()
 		}
 		return (*) => undo()
 	}
 
+	windowsChanged_() {
+		; When a window no longer exists, its icon handle cannot be used anymore (error in
+		; Icon.updatePicture setting Picture.value). These must be removed.
+		this.windows := Util.arrayRemoveWhere(this.windows, w => w.icon.handle && !winExist(w.id))
+
+		this.screen.windowsChanged(this.index, this.windows)
+	}
+
 	moveLatestWindow(errorHandler) {
 		if (this.windows.length > 0) {
-			this.screen.moveWindowToTileIndex(this.windows[-1].id, this.index, errorHandler)
+			this.screen.moveWindowToTileIndex(this.windows[1].id, this.index, errorHandler)
 		}
 	}
 

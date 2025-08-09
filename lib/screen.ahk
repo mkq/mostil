@@ -73,7 +73,7 @@ class Screen {
 	}
 
 	setSplitToPercentage(p, errorHandler) {
-		this.targetSplitPosition.setSplitPercentage(Util.checkType(Percentage, p))
+		this.targetSplitPosition.setSplitPercentage(Util.checkType(IntOrPercentage, p))
 		this.gui.setSplitToPercentage(p, errorHandler)
 	}
 }

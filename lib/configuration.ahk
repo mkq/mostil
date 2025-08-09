@@ -19,11 +19,11 @@ class Configuration {
 
 	static parseGuiConfig_(rawConfig) {
 		return {
-			iconScale: Percentage.parse(Util.getProp(rawConfig, 'iconScale', '10%'), 100, 'iconScale'),
-			maxIconSize: Util.getProp(rawConfig, 'maxIconSize', 256),
-			maxIconCount: Util.getProp(rawConfig, 'maxIconCount', 10),
-			iconOffsetX: Util.getProp(rawConfig, 'iconOffsetX', 10),
-			iconDist: Util.getProp(rawConfig, 'iconDist', 32),
+			maxIconCount: Util.checkType(Integer, Util.getProp(rawConfig, 'maxIconCount', 8)),
+			iconScale: IntOrPercentage.parse(Util.getProp(rawConfig, 'iconScale', '10%'), 0, 'GUI iconScale'),
+			maxIconSize: IntOrPercentage.parse(Util.getProp(rawConfig, 'maxIconSize', '128'), 0, 'GUI maxIconSize'),
+			iconOffsetX: IntOrPercentage.parse(Util.getProp(rawConfig, 'iconOffsetX', '10'), 0, 'GUI iconOffsetX'),
+			iconDist: IntOrPercentage.parse(Util.getProp(rawConfig, 'iconDist', '7%'), 0, 'GUI iconDist'),
 		}
 	}
 
@@ -50,7 +50,7 @@ class Configuration {
 		return parsers
 	}
 
-	static parseScreensConfig_(rawConfigs, guiRawConfig, addInput := false) {
+	static parseScreensConfig_(rawConfigs, globalGuiConfig, addInput := false) {
 		screens := []
 		tileInputs := []
 		for screenName, screenRawConfig in rawConfigs.ownProps() {
@@ -62,7 +62,7 @@ class Configuration {
 				}
 				screenRawConfig.ui.input := true
 			}
-			s := Configuration.parseScreenConfig_(screenName, screenRawConfig, guiRawConfig)
+			s := Configuration.parseScreenConfig_(screenName, screenRawConfig, globalGuiConfig)
 			screens.push(s)
 			for t in s.tiles {
 				if (Util.arrayIndexOf(tileInputs, t.input) > 0) {
@@ -72,14 +72,16 @@ class Configuration {
 			}
 		}
 		sm := ScreensManager(screens)
+
+		; "redo" this method if no screen has an input, this time adding one:
 		if (!sm.screenWithInput) {
-			return Configuration.parseScreensConfig_(rawConfigs, guiRawConfig, true)
+			return Configuration.parseScreensConfig_(rawConfigs, globalGuiConfig, true)
 		}
 
 		return sm
 	}
 
-	static parseScreenConfig_(name, rawConfig, guiRawConfig) {
+	static parseScreenConfig_(name, rawConfig, globalGuiConfig) {
 		pos := Position(
 			Util.requireInteger(rawConfig.x, "screen x"),
 			Util.requireInteger(rawConfig.y, "screen y"),
@@ -94,16 +96,16 @@ class Configuration {
 		}
 		horizontal := splitMatcher[1] == "h"
 		maxSplitValue := horizontal ? pos.w : pos.h
-		defaultSplitPercentage := Percentage.parse(splitMatcher[2] == "" ? "50%" : splitMatcher[2], maxSplitValue,
+		defaultSplitPercentage := IntOrPercentage.parse(splitMatcher[2] == "" ? "50%" : splitMatcher[2], maxSplitValue,
 			"screen split default value")
-		splitStepSize := Percentage.parse(rawConfig.hasProp("grid") ? rawConfig.grid : 20, maxSplitValue, "screen grid")
+		splitStepSize := IntOrPercentage.parse(rawConfig.hasProp("grid") ? rawConfig.grid : 20, maxSplitValue, "screen grid")
 
 		minMaxSplitValues := Util.getProp(rawConfig, "snap", ["0%", "100%"])
 		if !(minMaxSplitValues is Array && minMaxSplitValues.length == 2) {
 			throw ValueError("invalid screen snap (must be an array of two integers betwees 0 and 100, first < second)")
 		}
-		minSplitValue := Percentage.parse(minMaxSplitValues[1], maxSplitValue, "snap min")
-		maxSplitValue := Percentage.parse(minMaxSplitValues[2], maxSplitValue, "snap max")
+		minSplitValue := IntOrPercentage.parse(minMaxSplitValues[1], maxSplitValue, "snap min")
+		maxSplitValue := IntOrPercentage.parse(minMaxSplitValues[2], maxSplitValue, "snap max")
 		if (minSplitValue.value + splitStepSize.value >= maxSplitValue.value) {
 			throw ValueError("invalid screen snap (must be an array of two integers betwees 0 and 100, first + grid < second)")
 		}
@@ -122,14 +124,14 @@ class Configuration {
 		tile2 := Tile(2, Configuration.tileNameForInput_(t2input), t2input)
 
 		uiRawConfig := Util.getProp(rawConfig, "ui", { x: pos.x, y: pos.y, scale: "100%", input: false })
-		uiConfig := Configuration.parseScreenUiConfig_(uiRawConfig, pos)
+		screenUiConfig := Configuration.parseScreenUiConfig_(uiRawConfig, pos)
 
 		return Screen(name,
 			SplitPosition(horizontal, pos, defaultSplitPercentage, minSplitValue, maxSplitValue, splitStepSize),
-			uiConfig.position,
-			uiConfig.hasInput,
+			screenUiConfig.position,
+			screenUiConfig.hasInput,
 			[tile1, tile2],
-			guiRawConfig)
+			globalGuiConfig)
 	}
 
 	static parseScreenUiConfig_(rawConfig, screenPos) {
@@ -139,9 +141,11 @@ class Configuration {
 		}
 		x := Util.requireInteger(Util.getProp(rawConfig, "x", screenPos.x), "screen ui x")
 		y := Util.requireInteger(Util.getProp(rawConfig, "y", screenPos.y), "screen ui y")
-		p := Percentage(Util.requireNumber(regexReplace(Util.getProp(rawConfig, "scale", "100"), '%$', ''), 'screen ui scale'), 100)
-		w := p.applyTo(screenPos.w)
-		h := p.applyTo(screenPos.h)
+		p := IntOrPercentage.createPercentage(
+			Util.requireNumber(regexReplace(Util.getProp(rawConfig, "scale", "100"), '%$', ''), 'screen ui scale'),
+			100)
+		w := p.of(screenPos.w)
+		h := p.of(screenPos.h)
 		return {
 			position: Position(x, y, w, h),
 			hasInput: input

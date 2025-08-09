@@ -69,14 +69,18 @@ class ScreenGui {
 	initTileGui_(t, tileIndex, g, splitPos) {
 		gb := g.addGroupBox(, t.name)
 		pos := this.splitPosition.getChildPositions()[tileIndex]
+		Util.printDebugF('GroupBox[{}] position: {}', () => [tileIndex, pos])
 		controlMove(pos.x, pos.y, pos.w, pos.h, gb)
 		pics := []
+		pics.length := this.config.maxIconCount
 		; reverse order in case of overlapping icons ([1] hides [2], etc.)
 		for ii in Util.seq(this.config.maxIconCount, 1) {
-			pos := ScreenGui.iconPos_(gb, ii, this.config).toGuiOption()
-			pic := g.addPicture(pos, A_AHKPATH)
-			pics.push(pic)
+			pictureOpts := ScreenGui.iconPos_(gb, ii, this.config).toGuiOption()
+			pic := g.addPicture(pictureOpts, A_AHKPATH)
+			pics[ii] := pic
 			Icon.blank().updatePicture(pic)
+			ii2 := ii
+			Util.printDebugF('[{}] Picture[{}] options: {}', () => [ii2, pics.length, pictureOpts])
 		}
 		return {
 			groupBox: gb,
@@ -115,11 +119,10 @@ class ScreenGui {
 		for i, gt in this.tiles {
 			for j, pic in gt.pictures {
 				WindowUtil.moveWindowToPos(pic, ScreenGui.iconPos_(gt.groupBox, j, this.config), errorHandler)
-				; gt.groupBox.redraw()
-				; TODO move tile texts
+				gt.groupBox.redraw()
+				; TODO move tile text(s)
 			}
 		}
-		winRedraw(this.gui) ; TODO Or is gt.groupBox.redraw() sufficient?
 	}
 
 	updateWindowPositions(errorHandler) {
@@ -138,11 +141,13 @@ class ScreenGui {
 
 	static iconPos_(parentControl, i, config) {
 		pParent := Position.ofGuiControl(parentControl)
-		pCenter := pParent.center(config.iconScale)
-		size := min(pCenter.h, pCenter.w, config.maxIconSize) ; make square & limit size
-		p := Position(config.iconOffsetX + config.iconDist * (i - 1), pCenter.y, size, size)
-		Util.printDebugF('iconPos_({}, {}) == {}', () => [parentControl, i, p])
-		return p
+		pSize := min(pParent.h, pParent.w)
+		pCenter := pParent.center(config.iconScale.toFactor())
+		maxSize := config.maxIconSize.of(pSize)
+		size := min(pCenter.h, pCenter.w, maxSize) ; make square & limit size
+		pos := Position.ofFloats(config.iconOffsetX.of(pSize) + config.iconDist.of(pSize) * (i - 1), pCenter.y, size, size)
+		Util.printDebugF('iconPos_({}, {}, {}) == {}', () => [Util.dump(parentControl), i, Util.dump(config), pos])
+		return pos
 	}
 
 	setGroupBoxSizes_() {

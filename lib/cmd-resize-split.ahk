@@ -58,7 +58,7 @@ class ResizeSplitCommand extends Command {
 	}
 
 	executePreview(screensMgr, errorHandler) {
-		this.oldSplitPercentage := Util.checkType(Percentage, this.selectedTile.moveSplit(this.screensManager))
+		this.oldSplitPercentage := Util.checkType(IntOrPercentage, this.selectedTile.moveSplit(this.screensManager))
 		Util.printDebugF('oldSplitPercentage == {}', () => [this.oldSplitPercentage])
 	}
 
@@ -82,7 +82,7 @@ class ResetSplitCommand extends Command {
 	}
 
 	executePreview(screensMgr, errorHandler) {
-		this.oldSplitPercentages := Util.checkType(Percentage, this.screensManager.forEachScreen(s => s.resetSplit()))
+		this.oldSplitPercentages := Util.checkType(IntOrPercentage, this.screensManager.forEachScreen(s => s.resetSplit(errorHandler)))
 	}
 
 	submit(screensMgr, errorHandler) {

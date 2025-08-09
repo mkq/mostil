@@ -73,7 +73,7 @@ class Util {
 		try {
 			return x is Array ? Util.join(', ', x) : String(x)
 		} catch Error as e {
-			return format('<a {} without toString()>', type(x))
+			return format('<a {}>', type(x))
 		}
 	}
 
@@ -113,7 +113,7 @@ class Util {
 				result .= " }"
 				return result
 			default:
-				return String(o)
+				return Util.toString(o)
 		}
 	}
 
@@ -158,14 +158,14 @@ class Util {
 	static seq(arg1, arg2 := '') {
 		if (arg2 == '') {
 			i := 1
-			max := Integer(arg1)
+			maxValue := Integer(arg1)
 		} else {
 			i := Integer(arg1)
-			max := Integer(arg2)
+			maxValue := Integer(arg2)
 		}
-		if (i <= max) {
+		if (i <= maxValue) {
 			enum(&out) {
-				if (i <= max) {
+				if (i <= maxValue) {
 					out := i++
 					return true
 				}
@@ -174,7 +174,7 @@ class Util {
 			return enum
 		} else {
 			enumDesc(&out) {
-				if (i >= max) {
+				if (i >= maxValue) {
 					out := i--
 					return true
 				}
@@ -257,10 +257,10 @@ class Position {
 
 	static ofFloats(x, y, w, h) {
 		return Position(
-			round(Util.checkType(Float, x)),
-			round(Util.checkType(Float, y)),
-			round(Util.checkType(Float, w)),
-			round(Util.checkType(Float, h)))
+			round(Util.checkType(Number, x)),
+			round(Util.checkType(Number, y)),
+			round(Util.checkType(Number, w)),
+			round(Util.checkType(Number, h)))
 	}
 
 	static ofWindow(windowId) {
@@ -289,14 +289,15 @@ class Position {
 		return format('x{} y{} w{} h{}', this.x, this.y, this.w, this.h)
 	}
 
-	; @param perc a ratio between 0 and 1 or a Percentage
+	; @param perc a ratio between 0 and 1 or a IntOrPercentage
 	center(perc) {
-		if !(perc is Percentage) {
-			perc := Percentage(1000 * perc, 1000)
-		}
-		w := perc.applyTo(this.w)
-		h := perc.applyTo(this.h)
-		return Position.ofFloats(this.x + (this.w - w) / 2, this.y + (this.h - h) / 2, w, h)
+		perc2 := perc is IntOrPercentage ? perc :
+			IntOrPercentage.createPercentage(1000 * Number(perc), 1000)
+		w := perc2.of(this.w)
+		h := perc2.of(this.h)
+		result := Position.ofFloats(this.x + (this.w - w) / 2, this.y + (this.h - h) / 2, w, h)
+		Util.printDebugF('{}.center({}) == {}', () => [this, perc, result])
+		return result
 	}
 }
 
@@ -307,11 +308,11 @@ class SplitPosition {
 	__new(horizontal, pos, defaultSplitPercentage, minSplitPercentage, maxSplitPercentage, stepPercentage) {
 		this.horizontal := Util.checkType('boolean', horizontal)
 		this.position := Util.checkType(Position, pos)
-		this.defaultSplitPercentage := Util.checkType(Percentage, defaultSplitPercentage)
-		this.minSplitPercentage := Util.checkType(Percentage, minSplitPercentage)
-		this.maxSplitPercentage := Util.checkType(Percentage, maxSplitPercentage)
-		this.stepPercentage := Util.checkType(Percentage, stepPercentage)
-		this.splitPercentage := Util.checkType(Percentage, defaultSplitPercentage)
+		this.defaultSplitPercentage := Util.checkType(IntOrPercentage, defaultSplitPercentage)
+		this.minSplitPercentage := Util.checkType(IntOrPercentage, minSplitPercentage)
+		this.maxSplitPercentage := Util.checkType(IntOrPercentage, maxSplitPercentage)
+		this.stepPercentage := Util.checkType(IntOrPercentage, stepPercentage)
+		this.splitPercentage := Util.checkType(IntOrPercentage, defaultSplitPercentage)
 	}
 
 	toString() {
@@ -327,7 +328,7 @@ class SplitPosition {
 	}
 
 	setSplitPercentage(perc) {
-		Util.checkType(Percentage, perc)
+		Util.checkType(IntOrPercentage, perc)
 		oldSP := this.splitPercentage
 		this.splitPercentage := perc
 		Util.printDebugF('setSplitPercentage: {} → {}', () => [oldSP, this.toString()])
@@ -360,7 +361,7 @@ class SplitPosition {
 			; |       |              |
 			; +-------+--------------+   y+h
 			; x      x+s            x+w
-			splitValue := round(this.splitPercentage.applyTo(pos.w))
+			splitValue := round(this.splitPercentage.of(pos.w))
 			results := [ ;
 				Position(pos.x, pos.y, splitValue, pos.h), ;
 				Position(pos.x + splitValue, pos.y, pos.w - splitValue, pos.h)]
@@ -372,7 +373,7 @@ class SplitPosition {
 			; |       |
 			; +-------+ y+h
 			; x      x+w
-			splitValue := round(this.splitPercentage.applyTo(pos.h))
+			splitValue := round(this.splitPercentage.of(pos.h))
 			results := [ ;
 				Position(pos.x, pos.y, pos.w, splitValue), ;
 				Position(pos.x, pos.y + splitValue, pos.w, pos.h - splitValue)]
@@ -382,16 +383,29 @@ class SplitPosition {
 	}
 }
 
-; Represents a percentage.
-; In order to be pixel accurate when parsed from an absolute value, it stores the given value and reference (max)
-; value. For example a 1000 pixel wide (horizontally split) screen's default split value configured as 600 is
-; represented as a Percentage with value 600 and max 1000.
-class Percentage {
-	__new(value, max := 100) {
+; Represents a percentage or absolute number.
+; In order for a percentage to be pixel accurate when parsed from an absolute value, it stores the given value and
+; reference (max) value. For example a 1000 pixel wide (horizontally split) screen's default split value configured as
+; 600 is represented as a Percentage with value 600 and max 1000.
+class IntOrPercentage {
+	__new(isPercentage, value, max) {
+		this.isPercentage := Util.checkType('boolean', isPercentage)
 		this.value := Number(value)
 		this.max := Number(max)
 	}
 
+	static createAbsolute(value) {
+		return IntOrPercentage(false, Integer(value), 0)
+	}
+
+	static createPercentage(value, max := 100) {
+		return IntOrPercentage(true, value, max)
+	}
+
+	; Examples:
+	; - parse(40, 500, ''): 8%, but yielding exactly 40 when calculating these 8% of 500;
+	; - parse('8%', 500, ''): 8%, same as above if calculating 8% of 500 is exactly 40;
+	; - parse('8%', 0, ''): 8%, internally represented as 8 of 100 (100 being the default max value);
 	static parse(str, max, valueDescription) {
 		isPercentage := false
 		if (substr(str, -1, 1) == "%") {
@@ -400,49 +414,86 @@ class Percentage {
 		}
 		try {
 			value := Number(str)
+		} catch {
+			throw TypeError(valueDescription)
+		}
+		if (!isPercentage) {
+			return IntOrPercentage.createAbsolute(value)
+		}
+		if (value < 0 || value > 100) {
+			throw ValueError("invalid percentage " valueDescription)
+		}
+		if (max = 0) {
+			return IntOrPercentage.createPercentage(value)
+		}
+		try {
 			max := Number(max)
 		} catch {
 			throw TypeError(valueDescription)
 		}
-		if (isPercentage) {
-			if (value < 0 || value > 100) {
-				throw ValueError("invalid percentage " valueDescription)
-			}
-			value := max * value / 100
-		} else if (value > max) {
-			throw ValueError("invalid percentage " valueDescription)
-		}
-		return Percentage(value, max)
+		return IntOrPercentage.createPercentage(max * value / 100, max)
 	}
 
 	toString() {
-		return round(100 * this.value / this.max) '%'
+		return this.isPercentage
+			? format('{}/{} (~ {}%)', this.value, this.max, round(100 * this.value / this.max))
+			: this.value
 	}
 
-	factor() {
+	toFactor() {
+		if (!this.isPercentage) {
+			throw TypeError('absolute number ' this.value ' cannot be converted to factor')
+		}
 		return this.value / this.max
 	}
 
-	applyTo(value) {
-		return this.value == this.max ? value : (value * this.value / this.max)
+	of(value) {
+		return !this.isPercentage ? this.value :
+			this.value == this.max ? value : (value * this.value / this.max)
 	}
 
-	lessThan(otherPercentage) {
-		return this.max == otherPercentage.max ? this.value < otherPercentage.value
-			: this.factor() < otherPercentage.factor()
+	; Returns a Percentage (possibly this) with the given max and
+	; - representing the same factor / percentage as this if this is a percentage;
+	; - this.value as the value if this is absolute.
+	; This can be used to create a Percentage lazily: If e.g. something is configure to have absolute width 150 and is
+	; contained in something of variable width currently at 500, build a percentage 150/500. A percentage 75/250 at max
+	; 500 would give the same 150/500.
+	at(maxValue) {
+		return this.isPercentage
+			? (this.max == maxValue ? this : IntOrPercentage.createPercentage(this.value * maxValue / this.max, maxValue))
+			: IntOrPercentage.createPercentage(this.value, maxValue)
+	}
+
+	lessThan(other) {
+		if (this.isPercentage && other is IntOrPercentage && other.isPercentage) {
+			return this.max == other.max ? this.value < other.value
+				: this.toFactor() < other.factor()
+		} else if (!this.isPercentage && other is IntOrPercentage && !other.isPercentage) {
+			return this.value < other.value
+		} else if (!this.isPercentage && isNumber(other)) {
+			return this.value < Number(other)
+		} else {
+			throw TypeError('cannot compare ' this ' to ' other)
+		}
 	}
 	greaterThan(otherPercentage) {
 		return otherPercentage.lessThan(this)
 	}
 
 	; Returns a new Percentage with <multiplier> times <otherPercentage> added.
-	; <otherPercentage> must have the same max as this.
-	addPercentage(otherPercentage, multiplier) {
-		if (otherPercentage.max != this.max) {
+	; <otherPercentage> must have the same max as this, or both must be absolute.
+	addPercentage(other, multiplier) {
+		if (this.isPercentage != other.isPercentage) {
+			throw ValueError('adding percentage and absolute value not supported')
+		}
+		if (!this.isPercentage) {
+			return IntOrPercentage.createAbsolute(this.value + other.value)
+		}
+		if (other.max != this.max) {
 			throw ValueError('different max values not supported')
 		}
-		newValue := this.value + multiplier * otherPercentage.value
+		newValue := this.value + multiplier * other.value
 		newValue := min(this.max, max(0, newValue))
-		return Percentage(newValue, this.max)
+		return IntOrPercentage.createPercentage(newValue, this.max)
 	}
 }

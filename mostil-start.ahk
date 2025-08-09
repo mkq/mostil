@@ -12,7 +12,7 @@ hotkey("!f5", Mostil.start({
 		iconScale: "20%",
 		maxIconSize: 256,
 		iconOffsetX: 10,
-		iconDist: 32,
+		iconDist: "8%",
 	},
 	; screens (or any screen area to manage): A map from screen name to config object. Config attributes:
 	; - x, y, w, h: coordinates (top left corner, width, height)

@@ -41,11 +41,11 @@ class Tile {
 		return Util.arrayIndexOfWhere(this.windows, x => x.id == windowId)
 	}
 
-	addWindow(window) {
-		Util.checkType(Tile.Window, window)
+	addWindow(w) {
+		Util.checkType(Tile.Window, w)
 		; adding an already owned window should move it to the end, so remove and add
-		removeUndo := this.removeWindow(window.id)
-		this.windows.insertAt(1, window)
+		removeUndo := this.removeWindow(w)
+		this.windows.insertAt(1, w)
 		undo() {
 			if (this.windows.length > 0) {
 				this.windows.removeAt(1)
@@ -56,9 +56,9 @@ class Tile {
 		return (*) => undo()
 	}
 
-	removeWindow(windowId) {
-		Util.checkType(Integer, windowId)
-		i := Util.arrayIndexOfWhere(this.windows, x => x.id == windowId)
+	removeWindow(w) {
+		Util.checkType(Tile.Window, w)
+		i := Util.arrayIndexOf(this.windows, w)
 		if (i <= 0) {
 			return (*) => {}
 		}

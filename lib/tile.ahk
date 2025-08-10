@@ -30,7 +30,6 @@ class Tile {
 				WindowUtil.moveWindowToPos(w, windowPos, errorHandler)
 			}
 		}
-		this.windows := Util.arrayRemoveWhere(this.windows, w => !winExist(w.id))
 	}
 
 	containsWindow(windowId) {
@@ -72,10 +71,6 @@ class Tile {
 	}
 
 	windowsChanged_() {
-		; When a window no longer exists, its icon handle cannot be used anymore (error in
-		; Icon.updatePicture setting Picture.value). These must be removed.
-		this.windows := Util.arrayRemoveWhere(this.windows, w => w.icon.handle && !winExist(w.id))
-
 		this.screen.windowsChanged(this.index, this.windows)
 	}
 

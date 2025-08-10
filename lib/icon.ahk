@@ -6,22 +6,26 @@
 ; It can however be "applied to" a given picture GUI control.
 class Icon {
 	; private constructor
-	__new(filename, index, handle) {
+	__new(filename, index, handle, fallbackIcon := false) {
+		if (fallbackIcon == this) {
+			throw ValueError("fallbackIcon == this")
+		}
 		this.filename := filename
 		this.index := index
 		this.handle := handle
+		this.fallbackIcon := fallbackIcon
 	}
 
 	static blank() {
 		return Icon('', 0, 0)
 	}
 
-	static fromFile(filename, index := 1) {
-		return Icon(filename, index, 0)
+	static fromFile(filename, index := 1, fallbackIcon := false) {
+		return Icon(filename, index, 0, fallbackIcon)
 	}
 
-	static fromHandle(hIcon) {
-		return Icon('', 0, hIcon)
+	static fromHandle(hIcon, fallbackIcon := false) {
+		return Icon('', 0, hIcon, fallbackIcon)
 	}
 
 	; Can be used to save and restore the current state. The concrete value returned by get is
@@ -37,6 +41,17 @@ class Icon {
 
 	; Draws this icon on a given Picture control
 	updatePicture(pic) {
+		try {
+			this.updatePictureImpl_(pic)
+		} catch as e {
+			Util.printDebug('error setting picture to {}: {}', this, e)
+			if (this.fallbackIcon) {
+				this.fallbackIcon.updatePicture(pic)
+			}
+		}
+	}
+
+	updatePictureImpl_(pic) {
 		if (this.handle) {
 			Util.printDebug('updatePicture: handle {}', this.handle)
 			pic.value := 'HICON:' this.handle

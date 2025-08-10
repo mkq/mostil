@@ -10,9 +10,10 @@ class Configuration {
 	__new(rawConfig) {
 		this.debug := Util.getProp(rawConfig, "debug", false)
 		this.closeOnFocusLost := Util.getProp(rawConfig, "closeOnFocusLost", true)
+		matchWindowPositionTolerance := Util.checkType(Integer, Util.getProp(rawConfig, "matchWindowPositionTolerance", 16))
 		screensRawConfig := Util.getMandatoryProp(rawConfig, 'screens', 'no screens configured')
 		guiConfig := Configuration.parseGuiConfig_(Util.getProp(rawConfig, 'gui', {}))
-		this.screensManager := Configuration.parseScreensConfig_(screensRawConfig, guiConfig)
+		this.screensManager := Configuration.parseScreensConfig_(screensRawConfig, guiConfig, matchWindowPositionTolerance)
 		this.commandParsers := Configuration.parseCommandsConfig_(rawConfig.commands, this.screensManager)
 		Util.printDebug("Configuration ctor end")
 	}
@@ -50,7 +51,7 @@ class Configuration {
 		return parsers
 	}
 
-	static parseScreensConfig_(rawConfigs, globalGuiConfig, addInput := false) {
+	static parseScreensConfig_(rawConfigs, globalGuiConfig, matchWindowPositionTolerance, addInput := false) {
 		screens := []
 		tileInputs := []
 		for screenName, screenRawConfig in rawConfigs.ownProps() {
@@ -62,7 +63,7 @@ class Configuration {
 				}
 				screenRawConfig.ui.input := true
 			}
-			s := Configuration.parseScreenConfig_(screenName, screenRawConfig, globalGuiConfig)
+			s := Configuration.parseScreenConfig_(screenName, screenRawConfig, globalGuiConfig, matchWindowPositionTolerance)
 			screens.push(s)
 			for t in s.tiles {
 				if (Util.arrayIndexOf(tileInputs, t.input) > 0) {
@@ -75,13 +76,13 @@ class Configuration {
 
 		; "redo" this method if no screen has an input, this time adding one:
 		if (!sm.screenWithInput) {
-			return Configuration.parseScreensConfig_(rawConfigs, globalGuiConfig, true)
+			return Configuration.parseScreensConfig_(rawConfigs, globalGuiConfig, matchWindowPositionTolerance, true)
 		}
 
 		return sm
 	}
 
-	static parseScreenConfig_(name, rawConfig, globalGuiConfig) {
+	static parseScreenConfig_(name, rawConfig, globalGuiConfig, matchWindowPositionTolerance) {
 		pos := Position(
 			Util.requireInteger(rawConfig.x, "screen x"),
 			Util.requireInteger(rawConfig.y, "screen y"),
@@ -120,8 +121,8 @@ class Configuration {
 		} else {
 			throw ValueError("invalid screen inputs (must be an array of two different strings)")
 		}
-		tile1 := Tile(1, Configuration.tileNameForInput_(t1input), t1input)
-		tile2 := Tile(2, Configuration.tileNameForInput_(t2input), t2input)
+		tile1 := Tile(1, Configuration.tileNameForInput_(t1input), t1input, matchWindowPositionTolerance)
+		tile2 := Tile(2, Configuration.tileNameForInput_(t2input), t2input, matchWindowPositionTolerance)
 
 		uiRawConfig := Util.getProp(rawConfig, "ui", { x: pos.x, y: pos.y, scale: "100%", input: false })
 		screenUiConfig := Configuration.parseScreenUiConfig_(uiRawConfig, pos)

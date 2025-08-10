@@ -3,10 +3,11 @@
 ; One "half" of a Screen.
 ; This is a model class; the GUI is handled in class Screen.
 class Tile {
-	__new(index, name, input) {
+	__new(index, name, input, matchWindowPositionTolerance) {
 		this.index := index
 		this.name := name
 		this.input := input
+		this.matchWindowPositionTolerance := matchWindowPositionTolerance
 		this.screen := false
 		this.windows := [] ; array of Tile.Window, most recently added at [1]
 	}
@@ -68,6 +69,28 @@ class Tile {
 			this.windowsChanged_()
 		}
 		return (*) => undo()
+	}
+
+	removeNonExistingWindows() {
+		this.windows := Util.arrayRemoveWhere(this.windows, w => !winExist(w.id))
+	}
+
+	removeMisplacedWindows(thisPosition) {
+		approxEq(a, b) {
+			return abs(a - b) <= this.matchWindowPositionTolerance
+		}
+		matchesPos(windowId) {
+			wPos := Position.ofWindow(windowId)
+			matches := approxEq(wPos.xl, thisPosition.xl)
+				&& approxEq(wPos.yt, thisPosition.yt)
+				&& approxEq(wPos.xr, thisPosition.xr)
+				&& approxEq(wPos.yb, thisPosition.yb)
+			if (!matches) {
+				Util.printDebug('removing window {} at {} (tile {} position: {}', windowId, wPos, this.name, thisPosition)
+			}
+			return matches
+		}
+		this.windows := Util.arrayRemoveWhere(this.windows, w => !matchesPos(w.id))
 	}
 
 	windowsChanged_() {

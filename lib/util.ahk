@@ -281,6 +281,19 @@ class Position {
 		return Position(x, y, w, h)
 	}
 
+	xl { ; left x (same as x, for consistency with xr)
+		get => this.x
+	}
+	xr { ; right x
+		get => this.x + this.w
+	}
+	yt { ; top y (same as y, for consistency with yb)
+		get => this.y + this.h
+	}
+	yb { ; bottom y
+		get => this.y + this.h
+	}
+
 	toString() {
 		return format('{}({}, {}, {}x{})', type(this), this.x, this.y, this.w, this.h)
 	}

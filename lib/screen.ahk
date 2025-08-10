@@ -28,6 +28,14 @@ class Screen {
 	}
 
 	show(app, errorHandler) {
+		; "Reality check": Update this.windows to the current state of actual windows: Remove those
+		; which no longer exist or have been moved.
+		tilePositions := this.targetSplitPosition.getChildPositions()
+		for i, t in this.tiles {
+			t.removeNonExistingWindows()
+			t.removeMisplacedWindows(tilePositions[i])
+		}
+
 		this.gui.show(app, errorHandler)
 	}
 

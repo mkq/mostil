@@ -145,7 +145,11 @@ class ScreenGui {
 		pCenter := pParent.center(config.iconScale.toFactor())
 		maxSize := config.maxIconSize.of(pSize)
 		size := min(pCenter.h, pCenter.w, maxSize) ; make square & limit size
-		pos := Position.ofFloats(config.iconOffsetX.of(pSize) + config.iconDist.of(pSize) * (i - 1), pCenter.y, size, size)
+		pos := Position.ofFloats(
+			pParent.x + config.iconOffsetX.of(pSize) + config.iconDist.of(pSize) * (i - 1),
+			pCenter.y,
+			size,
+			size)
 		Util.printDebugF('iconPos_({}, {}, {}) == {}', () => [Util.dump(parentControl), i, Util.dump(config), pos])
 		return pos
 	}

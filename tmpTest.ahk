@@ -18,7 +18,7 @@ main() {
 			iconDist: '7%',
 		},
 		screens: {
-			A: { x: 2840, y: 200, w: 1000, h: 1200, split: "v38%", grid: "10%", snap: ["20%", "90%"], inputs: ["a", "b"] }
+			A: { x: 2840, y: 200, w: 1000, h: 1200, split: "h44%", grid: "10%", snap: ["20%", "90%"], inputs: ["a", "b"] }
 		},
 		commands: [ ;
 			{ command: "comment", input: "[]" }, ;

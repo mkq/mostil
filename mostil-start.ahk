@@ -71,7 +71,8 @@ hotkey("!f5", Mostil.start({
 		{ command: "placeWindow", input: "zz", name: "zsh 2", run: "mintty.exe --class=mintty-2 --tabbar=4 -i /bin/zsh.exe,0 -e zsh", criteria: "ahk_exe i)\bmintty\. ahk_class i)^mintty-2", previewIcon: "c:\cygwin\bin\zsh.exe" }, ;
 		{ command: "placeWindow", input: "z", name: "zsh 1", run: "mintty.exe --class=mintty-1 --tabbar=4 -i /bin/zsh.exe,0 -e zsh", criteria: "ahk_exe i)\bmintty\. ahk_class i)^mintty-1", previewIcon: "c:\cygwin\bin\zsh.exe" }, ;
 		{ command: "placeWindow", input: "e", name: "Notepad", run: "notepad.exe", criteria: "ahk_exe i)\bnotepad.exe$" }, ;
-		{ command: "placeWindow", input: "c", name: "Calculator", run: "calc.exe", criteria: "Calculator ahk_class i)^ApplicationFrameWindow$ ahk_exe i)\bApplicationFrameHost\." }, ;
+		{ command: "placeWindow", input: "C", name: "CalculatorC", run: "calc.exe", criteria: "Calculator ahk_class i)^ApplicationFrameWindow$ ahk_exe i)\bApplicationFrameHost\." }, ;
+		{ command: "placeWindow", input: "c", name: "Calculator", criteria: "Calculator ahk_class i)^ApplicationFrameWindow$ ahk_exe i)\bApplicationFrameHost\." }, ;
 		{ command: "placeWindow", input: "T", name: "Task Manager", run: "taskmgr.exe", criteria: "Task Manager ahk_class i)^TaskManagerWindow$ ahk_exe i)\btaskmgr\." }, ;
 		{ command: "placeWindow", input: "da", name: "Deezer", criteria: "ahk_exe i)\bdeezer\." }, ;
 		{ command: "placeWindow", input: "db", name: "Vivaldi", run: "vivaldi.exe", criteria: "ahk_exe i)\bvivaldi\." }, ;

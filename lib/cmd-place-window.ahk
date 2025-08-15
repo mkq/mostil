@@ -37,7 +37,11 @@ class PlaceWindowCommandParser extends CommandParser {
 	}
 
 	parse(cmdStr, &i, commandParseResults) {
-		; TODO Do not accept window input if criteria match no existing window and launchCmdStr is empty
+		; Do not accept window input if such a window does not exist & we cannot launch it:
+		if (!this.launchCmdStr && !PlaceWindowCommandParser.getWindowId_(this.criteria, this.screensManager)) {
+			return super.parse(cmdStr, &i, commandParseResults)
+		}
+
 		if (!Util.skip(cmdStr, this.windowInput, &i)) {
 			return super.parse(cmdStr, &i, commandParseResults)
 		}
@@ -51,6 +55,16 @@ class PlaceWindowCommandParser extends CommandParser {
 			commandParseResults.push(CommandParseResult(this.windowInput . tileInput, moveCmd))
 		}
 		return true
+	}
+
+	static getWindowId_(criteria, screensMgr) {
+		if (criteria) {
+			windowId := winExist(criteria)
+			Util.printDebug('window for {}: {}', criteria, windowId)
+			return windowId
+		} else { ; MRU mode
+			return WindowUtil.getActiveOtherWindow(screensMgr)
+		}
 	}
 }
 
@@ -76,7 +90,7 @@ class FocusWindowCommand extends Command {
 	}
 
 	submit(screensMgr, errorHandler) {
-		windowId := FocusWindowCommand.getWindowId_(this.windowSpec.criteria, this.screensManager)
+		windowId := PlaceWindowCommandParser.getWindowId_(this.windowSpec.criteria, this.screensManager)
 		if (!windowId) {
 			if (!this.windowSpec.launchCommand) {
 				errorHandler(format('no window matching {} found', this.windowSpec.criteria))
@@ -94,16 +108,6 @@ class FocusWindowCommand extends Command {
 		}
 
 		winActivate(windowId)
-	}
-
-	static getWindowId_(criteria, screensMgr) {
-		if (criteria) {
-			windowId := winExist(criteria)
-			Util.printDebug('window for {}: {}', criteria, windowId)
-			return windowId
-		} else { ; MRU mode
-			return WindowUtil.getActiveOtherWindow(screensMgr)
-		}
 	}
 }
 
@@ -128,7 +132,7 @@ class PlaceWindowCommand extends Command {
 	}
 
 	executePreview(screensMgr, errorHandler) {
-		this.windowId := FocusWindowCommand.getWindowId_(this.windowSpec.criteria, this.screensManager)
+		this.windowId := PlaceWindowCommandParser.getWindowId_(this.windowSpec.criteria, this.screensManager)
 		text := this.windowId ? winGetTitle(this.windowId) : (this.windowSpec.launchCommand " (pending launch)")
 		ico := this.windowId && (hIcon := WindowUtil.getWindowIcon(this.windowId))
 			? Icon.fromHandle(hIcon, this.defaultPreviewIcon)

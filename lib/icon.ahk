@@ -39,6 +39,12 @@ class Icon {
 		}
 	}
 
+	equals(other) {
+		return type(this) == type(other)
+			&& this.internalFormat == other.internalFormat
+			&& Util.equal(this.fallbackIcon, other.fallbackIcon)
+	}
+
 	; Draws this icon on a given Picture control
 	updatePicture(pic) {
 		try {

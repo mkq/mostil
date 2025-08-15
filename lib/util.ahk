@@ -54,8 +54,8 @@ class Util {
 		return Util.addPrintDebugN(f, f.name)
 	}
 
-	static eq(a, b) {
-		return a == false ? b == false : a == b
+	static equal(a, b) {
+		return a == b || (a == false && b == false) || (a != false && a.equals(b))
 	}
 
 	static getProp(o, propName, defaultValue := false) {
@@ -129,7 +129,7 @@ class Util {
 	}
 
 	static arrayIndexOf(arr, elem, startIndex := 1) {
-		return Util.arrayIndexOfWhere(arr, x => x == elem, startIndex)
+		return Util.arrayIndexOfWhere(arr, x => x = elem, startIndex)
 	}
 
 	static arrayRemoveWhere(arr, predicate) {

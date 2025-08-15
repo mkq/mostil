@@ -49,6 +49,7 @@ class Tile {
 		undo() {
 			if (this.windows.length > 0) {
 				this.windows.removeAt(1)
+				this.windowsChanged_()
 			}
 			removeUndo()
 		}
@@ -58,7 +59,7 @@ class Tile {
 
 	removeWindow(w) {
 		Util.checkType(Tile.Window, w)
-		i := Util.arrayIndexOf(this.windows, w)
+		i := Util.arrayIndexOfWhere(this.windows, x => x.equals(w))
 		if (i <= 0) {
 			return (*) => {}
 		}
@@ -72,7 +73,7 @@ class Tile {
 	}
 
 	removeNonExistingWindows() {
-		this.windows := Util.arrayRemoveWhere(this.windows, w => !winExist(w.id))
+		this.removeWindowsWhere_(w => !winExist(w.id))
 	}
 
 	removeMisplacedWindows(thisPosition) {
@@ -90,7 +91,15 @@ class Tile {
 			}
 			return matches
 		}
-		this.windows := Util.arrayRemoveWhere(this.windows, w => !matchesPos(w.id))
+		this.removeWindowsWhere_(w => !matchesPos(w.id))
+	}
+
+	removeWindowsWhere_(predicate) {
+		oldCount := this.windows.length
+		this.windows := Util.arrayRemoveWhere(this.windows, predicate)
+		if (this.windows.length != oldCount) {
+			this.windowsChanged_()
+		}
 	}
 
 	windowsChanged_() {
@@ -109,6 +118,13 @@ class Tile {
 			this.id := Util.checkType(Integer, id)
 			this.icon := Util.checkType(Icon, ico)
 			this.text := Util.checkType(String, text)
+		}
+
+		equals(other) {
+			return type(this) == type(other)
+				&& this.id == other.id
+				&& this.text == other.text
+				&& Util.equal(this.icon, other.icon)
 		}
 	}
 }

@@ -17,8 +17,6 @@ class ScreensManager {
 		this.screens := screens
 	}
 
-	; TODO refactor: Pass less than the full Mostil app.
-	; Or move all ScreensManager functionality inside class Mostil.
 	show(app, errorHandler) {
 		this.forEachScreenInputScreenLast(s => s.show(app, errorHandler))
 	}

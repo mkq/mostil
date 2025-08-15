@@ -31,10 +31,11 @@ class Mostil {
 	; Starts the app and returns a function which shows the GUI, intended to be called by a hotkey.
 	; Example: hotkey("!f5", Mostil.start({ … }))
 	static start(config) {
-		app := Mostil(config)
-		return (*) => app.screensManager.show(app, msg => app.handleError_(msg))
+		return Mostil(config).showFunc
 	}
 
+	; private constructor
+	; @see static start method
 	__new(config) {
 		Util.printDebugF('{}.__new({})', () => [type(this), Util.dump(config)])
 		this.name := "Mostil - Mostly tiling window layout manager"
@@ -52,6 +53,7 @@ class Mostil {
 
 		this.commandParseResults := []
 		this.submittable := true
+		this.showFunc := (*) => this.screensManager.show(this, this.handleError_)
 	}
 
 	submit() {

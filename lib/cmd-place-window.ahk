@@ -72,6 +72,9 @@ class FocusWindowCommand extends Command {
 	executePreview(screensMgr, errorHandler) {
 	}
 
+	undo(screensMgr, errorHandler) {
+	}
+
 	submit(screensMgr, errorHandler) {
 		windowId := FocusWindowCommand.getWindowId_(this.windowSpec.criteria, this.screensManager)
 		if (!windowId) {
@@ -91,9 +94,6 @@ class FocusWindowCommand extends Command {
 		}
 
 		winActivate(windowId)
-	}
-
-	undo(screensMgr, errorHandler) {
 	}
 
 	static getWindowId_(criteria, screensMgr) {
@@ -129,12 +129,17 @@ class PlaceWindowCommand extends Command {
 
 	executePreview(screensMgr, errorHandler) {
 		this.windowId := FocusWindowCommand.getWindowId_(this.windowSpec.criteria, this.screensManager)
-		text := this.windowId ? ("window " this.windowId) : (this.windowSpec.launchCommand " (pending launch)")
+		text := this.windowId ? winGetTitle(this.windowId) : (this.windowSpec.launchCommand " (pending launch)")
 		ico := this.windowId && (hIcon := WindowUtil.getWindowIcon(this.windowId))
 			? Icon.fromHandle(hIcon, this.defaultPreviewIcon)
 			: this.defaultPreviewIcon
 		tw := Tile.Window(this.windowId, ico, text)
 		this.moveWindowUndoFunc := screensMgr.moveWindowToTile(tw, this.selectedTile, errorHandler)
+	}
+
+	undo(screensMgr, errorHandler) {
+		this.moveWindowUndoFunc()
+		this.moveWindowUndoFunc := (*) => {}
 	}
 
 	submit(screensMgr, errorHandler) {
@@ -145,10 +150,5 @@ class PlaceWindowCommand extends Command {
 		}
 		this.selectedTile.moveLatestWindow(errorHandler)
 		this.windowId := 0
-	}
-
-	undo(screensMgr, errorHandler) {
-		this.moveWindowUndoFunc()
-		this.moveWindowUndoFunc := (*) => {}
 	}
 }

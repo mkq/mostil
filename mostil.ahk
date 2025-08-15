@@ -125,6 +125,9 @@ class Mostil {
 	}
 
 	parseCommands(cmdStr) {
+		; TODO Allow comments anywhere.
+		; For example, if CommentCommandParser is bound to "[]" and "ab" is a valid command, "a[comment]b" should work.
+
 		Util.checkType(String, cmdStr)
 		global submittable := true
 		this.setStatusBarText_('')

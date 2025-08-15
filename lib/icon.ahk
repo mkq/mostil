@@ -41,7 +41,9 @@ class Icon {
 
 	equals(other) {
 		return type(this) == type(other)
-			&& this.internalFormat == other.internalFormat
+			&& this.handle == other.handle
+			&& this.index == other.index
+			&& this.filename == other.filename
 			&& Util.equal(this.fallbackIcon, other.fallbackIcon)
 	}
 

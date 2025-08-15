@@ -18,7 +18,7 @@ main() {
 			iconDist: '7%',
 		},
 		screens: {
-			A: { x: 2840, y: 200, w: 1000, h: 1200, split: "h44%", grid: "10%", snap: ["20%", "90%"], inputs: ["a", "b"] }
+			A: { x: 2840, y: 200, w: 1000, h: 1200, split: "v44%", grid: "10%", snap: ["20%", "90%"], inputs: ["a", "b"] }
 		},
 		commands: [ ;
 			{ command: "comment", input: "[]" }, ;
@@ -38,19 +38,14 @@ main() {
 		Tile.Window(0, Icon.fromFile('C:\Windows\System32\shell32.dll', 32), '5'), ; trash
 		Tile.Window(0, Icon.fromFile('C:\Windows\System32\shell32.dll', 28), '6'), ; power off
 	]
-	for ti, t in scr.tiles {
-		for twi, tw in tileWindows {
-			t.addWindow(tw)
-		}
-		if (ti == 2) {
-			sleep(2000)
-			t.removeWindow(tileWindows[4])
-			sleep(2000)
-			undo := t.addWindow(tileWindows[2])
-			sleep(2000)
-			undo()
-		}
+	for twi, tw in tileWindows {
+		scr.tiles[1].addWindow(tw)
 	}
+	sleep(2000)
+	undo := app.screensManager.moveWindowToTile(tileWindows[4], scr.tiles[2], errorHandler)
+	sleep(2000)
+	undo()
+
 	scr.hide()
 	scr.show(app, errorHandler)
 }

@@ -131,14 +131,18 @@ class PlaceWindowCommand extends Command {
 		return format("{}({}, {})", super.toString(), this.windowSpec.name, String(this.selectedTile))
 	}
 
-	executePreview(screensMgr, errorHandler) {
+	setWindow_() {
 		this.windowId := PlaceWindowCommandParser.getWindowId_(this.windowSpec.criteria, this.screensManager)
 		text := this.windowId ? winGetTitle(this.windowId) : (this.windowSpec.launchCommand " (pending launch)")
 		ico := this.windowId && (hIcon := WindowUtil.getWindowIcon(this.windowId))
 			? Icon.fromHandle(hIcon, this.defaultPreviewIcon)
 			: this.defaultPreviewIcon
-		tw := Tile.Window(this.windowId, ico, text)
-		this.moveWindowUndoFunc := screensMgr.moveWindowToTile(tw, this.selectedTile, errorHandler)
+		this.tileWindow := Tile.Window(this.windowId, ico, text)
+	}
+
+	executePreview(screensMgr, errorHandler) {
+		this.setWindow_()
+		this.moveWindowUndoFunc := screensMgr.moveWindowToTile(this.tileWindow, this.selectedTile, errorHandler)
 	}
 
 	undo(screensMgr, errorHandler) {
@@ -149,10 +153,11 @@ class PlaceWindowCommand extends Command {
 	submit(screensMgr, errorHandler) {
 		; window may have been created by FocusWindowCommand in the meantime
 		if (!this.windowId) {
-			this.undo(screensMgr, errorHandler)
-			this.executePreview(screensMgr, errorHandler)
+			oldTileWindow := this.tileWindow
+			this.setWindow_()
+			this.selectedTile.replaceWindow(oldTileWindow, this.tileWindow)
 		}
-		this.selectedTile.moveLatestWindow(errorHandler)
+		this.selectedTile.moveWindowId(this.windowId, errorHandler)
 		this.windowId := 0
 	}
 }

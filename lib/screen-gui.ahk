@@ -4,6 +4,10 @@
 #include %A_SCRIPTDIR%/lib/tile.ahk
 
 class ScreenGui {
+	static BLANK_ICON {
+		get => Icon.blank()
+	}
+
 	__new(scr, pos, config, withInput, targetSplitPosition) {
 		Util.printDebug("init GUI for screen {} (with{} input)", scr.toString(), withInput ? '' : 'out')
 		this.screen := scr
@@ -77,7 +81,7 @@ class ScreenGui {
 			pictureOpts := ScreenGui.iconPos_(gb, ii, this.config).toGuiOption()
 			pic := g.addPicture(pictureOpts, A_AHKPATH)
 			pics[ii] := pic
-			Icon.blank().updatePicture(pic)
+			ScreenGui.BLANK_ICON.updatePicture(pic)
 			ii2 := ii
 			Util.printDebugF('[{}] Picture[{}] options: {}', () => [ii2, pics.length, pictureOpts])
 		}
@@ -94,7 +98,7 @@ class ScreenGui {
 		this.tiles[tileIndex].text.text := windows.length > 0 ? windows[1].text : ''
 		pictures := this.tiles[tileIndex].pictures
 		for i, pic in pictures {
-			ico := i > windows.length ? Icon.blank() : windows[i].icon
+			ico := i > windows.length ? ScreenGui.BLANK_ICON : windows[i].icon
 			ico.updatePicture(pic)
 		}
 	}

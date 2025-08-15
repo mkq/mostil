@@ -102,13 +102,26 @@ class Tile {
 		}
 	}
 
+	replaceWindow(oldTw, newTw) {
+		found := false
+		for i, tw in this.windows {
+			if (tw.equals(oldTw)) {
+				found := true
+				this.windows[i] := newTw
+			}
+		}
+		if (found) {
+			this.windowsChanged_()
+		}
+	}
+
 	windowsChanged_() {
 		this.screen.windowsChanged(this.index, this.windows)
 	}
 
-	moveLatestWindow(errorHandler) {
-		if (this.windows.length > 0) {
-			this.screen.moveWindowToTileIndex(this.windows[1].id, this.index, errorHandler)
+	moveWindowId(windowId, errorHandler) {
+		if (windowId) {
+			this.screen.moveWindowToTileIndex(windowId, this.index, errorHandler)
 		}
 	}
 

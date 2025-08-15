@@ -33,7 +33,7 @@ class Screen {
 		tilePositions := this.targetSplitPosition.getChildPositions()
 		for i, t in this.tiles {
 			t.removeNonExistingWindows()
-			t.removeMisplacedWindows(tilePositions[i])
+			t.removeMovedWindows(tilePositions[i])
 		}
 
 		this.gui.show(app, errorHandler)

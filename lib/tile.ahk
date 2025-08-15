@@ -76,7 +76,7 @@ class Tile {
 		this.removeWindowsWhere_(w => !winExist(w.id))
 	}
 
-	removeMisplacedWindows(thisPosition) {
+	removeMovedWindows(thisPosition) {
 		approxEq(a, b) {
 			return abs(a - b) <= this.matchWindowPositionTolerance
 		}

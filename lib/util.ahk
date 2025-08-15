@@ -288,7 +288,7 @@ class Position {
 		get => this.x + this.w
 	}
 	yt { ; top y (same as y, for consistency with yb)
-		get => this.y + this.h
+		get => this.y
 	}
 	yb { ; bottom y
 		get => this.y + this.h

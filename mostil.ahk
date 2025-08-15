@@ -71,7 +71,7 @@ class Mostil {
 		this.screensManager.hide()
 
 		input := this.screensManager.screenWithInput.input
-		cmdStr := this.normalizeCommandString(input.value)
+		cmdStr := this.normalizeCommandString(input.text)
 		this.defaultInputs := Util.moveToOrInsertAt0(this.defaultInputs, cmdStr)
 		input.delete()
 		input.add(this.defaultInputs)
@@ -84,12 +84,12 @@ class Mostil {
 			Util.printDebug("undo {}", cpr)
 			cpr.command.undo(this.screensManager, msg => this.handleError_(msg))
 		}
-		this.screensManager.screenWithInput.input.value := ''
+		this.screensManager.screenWithInput.input.text := ''
 		this.screensManager.hide()
 	}
 
 	onValueChange() {
-		cmdStr := this.screensManager.screenWithInput.gui.input.text
+		cmdStr := this.screensManager.screenWithInput.input.text
 		Util.printDebug('__________ onValueChange: "{}" __________', cmdStr)
 		global closeOnFocusLostAllowed := false
 		try {
@@ -158,8 +158,9 @@ class Mostil {
 	}
 
 	normalizeCommandString(cmdStr) {
-		; TODO
-		return cmdStr " [" A_NOW "]"
+		; TODO? For example, replace ResizeSplitCommands [left, right, right, right] with [right, right], but only if
+		; that would not change the outcome. (I.e. the left one was not affected by the snap margin.)
+		return cmdStr
 	}
 
 	handleError_(msg) {

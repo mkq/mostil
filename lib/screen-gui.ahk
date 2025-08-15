@@ -32,6 +32,7 @@ class ScreenGui {
 		g.show()
 		WindowUtil.moveWindowToPos(g, this.position, errorHandler)
 		windowClientPos := Position.ofWindowClient(g)
+		g.setFont('s12')
 		this.splitPosition := SplitPosition(this.targetSplitPosition.horizontal,
 			Position(0, 0, windowClientPos.w, windowClientPos.h), ; window-relative position
 			this.targetSplitPosition.defaultSplitPercentage,
@@ -39,30 +40,28 @@ class ScreenGui {
 			this.targetSplitPosition.maxSplitPercentage,
 			this.targetSplitPosition.stepPercentage)
 
+		this.tiles := Util.arrayMap(this.screen.tiles, (ti, t) => this.initTileGui_(t, ti, g, this.splitPosition))
+		this.setGroupBoxSizes_()
+
 		this.statusBar := false
 		if (this.hasInput) {
 			g.onEvent("Close", (*) => exitApp())
-			buttonW := 80
-			inputW := min(600, windowClientPos.w)
+			inputW := min(700, windowClientPos.w)
 			this.input := g.addComboBox(format('w{} x{} y{} vCmd',
 				inputW,
-				(windowClientPos.w - inputW - 3 * buttonW) / 2,
+				(windowClientPos.w - inputW) / 2,
 				windowClientPos.h / 2 - 20))
 			this.input.focus()
 			this.input.onEvent("Change", (*) => app.onValueChange())
-			okButton := g.addButton(format('Default w{} x+0', buttonW), "OK")
-			cancelButton := g.addButton(format('w{} x+0', buttonW), "Cancel")
-			reloadButton := g.addButton(format('w{} x+0', buttonW), "&Reload")
+			; invisible OK button to handle enter in the combobox:
+			okButton := g.addButton('Default w42 x+0', "OK")
 			okButton.onEvent("Click", (*) => app.submit())
-			cancelButton.onEvent("Click", (*) => app.cancel('Button'))
-			reloadButton.onEvent("Click", (*) => reload()) ; TODO remove
+			okButton.visible := false
 			this.statusBar := g.addStatusBar()
 		}
+
 		g.onEvent("Close", (*) => app.cancel('window closed'))
 		g.onEvent("Escape", (*) => app.cancel('escape'))
-
-		this.tiles := Util.arrayMap(this.screen.tiles, (ti, t) => this.initTileGui_(t, ti, g, this.splitPosition))
-		this.setGroupBoxSizes_()
 	}
 
 	; the per-Tile GUI elements
@@ -156,6 +155,21 @@ class ScreenGui {
 
 	setGroupBoxSizes_() {
 		for ti, tPos in this.splitPosition.getChildPositions() {
+			; For groupboxes on top of each other with distance 0, both borders are visible (because the top border is
+			; "misplaced" by half the label height). For side-by-side groupboxes, the borders draw over each other.
+			; ┌─[v1]──┐  ┌─[h1]───┬─[h2]────┐
+			; │       │  │        │         │
+			; └───────┘  └────────┴─────────┘
+			; ┌─[v2]──┐
+			; └───────┘
+			; Therefor, for a consistent look, shrink them a bit in horizontal mode:
+			if (this.splitPosition.horizontal) {
+				tPos.w -= 4
+				if (ti == 2) {
+					tPos.x += 4
+				}
+			}
+
 			controlMove(tPos.x, tPos.y, tPos.w, tPos.h, this.tiles[ti].groupBox)
 		}
 	}

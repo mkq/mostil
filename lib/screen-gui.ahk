@@ -81,13 +81,17 @@ class ScreenGui {
 			ii2 := ii
 			Util.printDebugF('[{}] Picture[{}] options: {}', () => [ii2, pics.length, pictureOpts])
 		}
+		text := g.addText('w' pos.w, '')
+		text.setFont('s12')
 		return {
 			groupBox: gb,
 			pictures: pics,
+			text: text,
 		}
 	}
 
 	windowsChanged(tileIndex, windows) {
+		this.tiles[tileIndex].text.text := windows.length > 0 ? windows[1].text : ''
 		pictures := this.tiles[tileIndex].pictures
 		for i, pic in pictures {
 			ico := i > windows.length ? Icon.blank() : windows[i].icon
@@ -119,7 +123,6 @@ class ScreenGui {
 			for j, pic in gt.pictures {
 				WindowUtil.moveWindowToPos(pic, ScreenGui.iconPos_(gt.groupBox, j, this.config), errorHandler)
 				gt.groupBox.redraw()
-				; TODO move tile text(s)
 			}
 		}
 	}

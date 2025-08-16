@@ -18,7 +18,6 @@ setTitleMatchMode("RegEx")
 ; - allow screen to have an input key ("maximize" shortcut without moving the split to 0% or 100%)
 ; - for maximizing only: allow a screen without tiles, but with an input key
 ; - configurable size how many pixels or percent a window should overlap the split
-; - If any own window is activated, activate the one with input instead.
 ; - new command to close a window
 ; - new command to activate previously active window; example command strings if this is bound to "^":
 ;   - "en^" => select window "e", move it to tile "n", focus back.
@@ -45,14 +44,16 @@ class Mostil {
 		this.closeOnFocusLostAllowed := true
 		this.defaultInputs := []
 		Util.DEBUG_OUTPUT := c.debug
-		if (c.closeOnFocusLost) {
-			onMessage(0x6, (wp, lp, msg, hwnd) => ; WM_ACTIVATE
-				this.closeOnFocusLostAllowed && !wp && this.screensManager.containsWindowId(hwnd)
-					? this.cancel('focus lost') : 1)
-		}
 
 		this.commandParseResults := []
 		this.submittable := true
+		if (c.closeOnFocusLost) {
+			onMessage(0x6, (wp, lp, msg, windowId) =>
+				; 0x6: WM_ACTIVATE
+				; wp: 0 = deactivated, 1 = activated, 2 = activated by mouse
+				this.closeOnFocusLostAllowed && !wp && this.screensManager.screenWithInput.gui.gui.hwnd == windowId
+					? this.cancel('focus lost') : 1)
+		}
 		this.showFunc := (*) => this.screensManager.show(this, this.handleError_)
 	}
 

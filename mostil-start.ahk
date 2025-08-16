@@ -6,7 +6,7 @@ traySetIcon("shell32.dll", 251)
 
 hotkey("!f5", Mostil.start({
 	debug: true,
-	closeOnFocusLost: false,
+	closeOnFocusLost: true,
 	; When a window has been moved into a tile, but its position (any border) changes externally by more than this many
 	; pixels, the tile disowns it.
 	matchWindowPositionTolerance: 16,

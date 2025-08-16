@@ -1,4 +1,5 @@
 #include %A_SCRIPTDIR%/lib/cmd-comment.ahk
+#include %A_SCRIPTDIR%/lib/cmd-nop.ahk
 #include %A_SCRIPTDIR%/lib/cmd-place-window.ahk
 #include %A_SCRIPTDIR%/lib/cmd-resize-split.ahk
 #include %A_SCRIPTDIR%/lib/configuration.ahk
@@ -43,6 +44,8 @@ class Configuration {
 					parser := ResizeSplitCommandParser.parseConfig(r, screensManager)
 				case "comment":
 					parser := CommentCommandParser.parseConfig(r)
+				case "NOP":
+					parser := NopCommandParser.parseConfig(r)
 				default:
 					throw ValueError("invalid command: " r.command)
 			}
@@ -145,8 +148,8 @@ class Configuration {
 		p := IntOrPercentage.createPercentage(
 			Util.requireNumber(regexReplace(Util.getProp(rawConfig, "scale", "100"), '%$', ''), 'screen ui scale'),
 			100)
-		w := p.of(screenPos.w)
-		h := p.of(screenPos.h)
+		w := round(p.of(screenPos.w))
+		h := round(p.of(screenPos.h))
 		return {
 			position: Position(x, y, w, h),
 			hasInput: input

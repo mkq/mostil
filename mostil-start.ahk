@@ -36,7 +36,7 @@ hotkey("!f5", Mostil.start({
 	screens: {
 		;Q: { x: -2560, y: -200, w: 2560, h: 2880, split: "v60%", grid: "10%", snap: ["30%", "70%"], inputs: ["h", "n"] },
 		;W: { x:     0, y:    0, w: 5120, h: 2160, split: "h38%", grid: "12%", snap: ["20%", "51%"], inputs: ["r", "t"] },
-		L: { x: 3040, y: 0, w: 800, h: 600, split: "h38%", grid: "10%", snap: ["20%", "90%"], inputs: ["a", "b"] },
+		L: { x: 3040, y: 0, w: 800, h: 600, split: "h38%", grid: "10%", snap: ["20%", "90%"], inputs: ["a", "b"], ui: { x: 3100, y: 50, scale: 80 } },
 		R: { x: 2790, y: 600, w: 1050, h: 750, split: "v", grid: "7%", snap: ["25%", "75%"], inputs: ["c", "d"], ui: { input: true } },
 		;F: { x:     0, y:    0, w: 3838, h: 2080, split: "v0",   inputs: ["↑", "f"], ui: { x: 2900, y: 1500, scale: 20 } },
 	},
@@ -62,8 +62,12 @@ hotkey("!f5", Mostil.start({
 	;   history. Its input actually configures two inputs: The character to start and the character to end a comment.
 	;   They may be equal (in which case no nested comments are possible). Two equal characters may also be written as
 	;   a single char string, e.g. `input: "/"` is equivalent to `input: "//"`.
-	;   Parameters: anything printable is allowed between start and end of comment
+	;   Limitation: Because comments obey the general command parsing rules, they cannot occur inside another command.
+	;   For example, if comment is bound to "[]" and "ab" is a valid command, "a[comment]b" is different (invalid or
+	;   two commands "a" and "b", depending on other config).
+	;   Parameters: anything printable is allowed between start and end of comment.
 	commands: [ ;
+		{ command: "NOP", input: " `t" }, ;
 		{ command: "comment", input: "[]" }, ;
 		{ command: "resizeSplit", input: "-" }, ;
 		{ command: "placeWindow", input: ".", name: "(current)" }, ;

@@ -460,6 +460,7 @@ class IntOrPercentage {
 		return this.value / this.max
 	}
 
+	; Computes this percentage of a given value.
 	of(value) {
 		return !this.isPercentage ? this.value :
 			this.value == this.max ? value : (value * this.value / this.max)

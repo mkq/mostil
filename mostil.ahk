@@ -11,12 +11,13 @@ setTitleMatchMode("RegEx")
 #include %A_SCRIPTDIR%/lib/window-util.ahk
 
 ; TODO
+; - implement normalizeCommandString for a clean command history in ComboBox drop-down.
+;   For example, replace ResizeSplitCommands [left, right, right, right] with [right, right], but only if
+;   that would not change the outcome. (I.e. the left one was not affected by the snap margin.)
 ; - allow nesting like a real tiling window manager (a screen can have a parent tile instead of fixed x, y, w, h)
 ; - allow screen to have an input key ("maximize" shortcut without moving the split to 0% or 100%)
 ; - for maximizing only: allow a screen without tiles, but with an input key
 ; - configurable size how many pixels or percent a window should overlap the split
-; - Add configurable command separator char? That would e.g. enable multiple focus commands even if a placeWindow input starts
-;   with a char equal to a tile.
 ; - If any own window is activated, activate the one with input instead.
 ; - new command to close a window
 ; - new command to activate previously active window; example command strings if this is bound to "^":
@@ -126,9 +127,6 @@ class Mostil {
 	}
 
 	parseCommands(cmdStr) {
-		; TODO Allow comments anywhere.
-		; For example, if CommentCommandParser is bound to "[]" and "ab" is a valid command, "a[comment]b" should work.
-
 		Util.checkType(String, cmdStr)
 		global submittable := true
 		this.setStatusBarText_('')
@@ -157,8 +155,6 @@ class Mostil {
 	}
 
 	normalizeCommandString(cmdStr) {
-		; TODO? For example, replace ResizeSplitCommands [left, right, right, right] with [right, right], but only if
-		; that would not change the outcome. (I.e. the left one was not affected by the snap margin.)
 		return cmdStr
 	}
 

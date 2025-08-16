@@ -34,7 +34,7 @@ class WindowUtil {
 		for wid_ in winGetList() {
 			wid := wid_ ; workaround for Autohotkey bug? Loop variable does not exist in the printDebugF closure, but this copy does.
 			title := winGetTitle(wid)
-			include := title !== '' ; TODO: better criterium to exclude non-window results like Shell_TrayWnd?
+			include := title !== '' ; Is there a better criterium to exclude non-window results like Shell_TrayWnd?
 			Util.printDebugF('winGetList(): id: {}, processName: {}, class: {}, title: {}, include: {}', () =>
 				[wid, winGetProcessName(wid), winGetClass(wid), title, include])
 			if (include) {

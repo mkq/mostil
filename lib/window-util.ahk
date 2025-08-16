@@ -3,26 +3,11 @@
 class WindowUtil {
 	static moveWindowToPos(windowId, pos, errorHandler := false) {
 		try {
+			winRestore(windowId)
 			return winMove(pos.x, pos.y, pos.w, pos.h, windowId)
 		} catch Error as e {
 			if (errorHandler) {
 				errorHandler('ERROR moving window ' windowId ': ' e.message)
-			} else {
-				throw e
-			}
-		}
-	}
-
-	static winSetMinMax(windowId, value, errorHandler := false) {
-		try {
-			switch (value) {
-				case -1: winMinimize(windowId)
-				case +1: winMaximize(windowId)
-				default: winRestore(windowId)
-			}
-		} catch Error as e {
-			if (errorHandler) {
-				errorHandler('ERROR moving window' windowId ': ' e.message)
 			} else {
 				throw e
 			}

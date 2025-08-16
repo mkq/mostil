@@ -26,16 +26,21 @@ class Util {
 	; Checks a value's type
 	; @param requiredType a Class or a type name as string or "Boolean"
 	; @return value
+	; @throws TypeError if value is not of the required type
 	static checkType(requiredType, value) {
+		if (!Util.isType(requiredType, value)) {
+			throw TypeError(format('invalid type {}: {}', type(value), Util.toString(value)))
+		}
+		return value
+	}
+
+	static isType(requiredType, value) {
 		requiredType2 := requiredType = 'boolean' ? 'Integer' : requiredType
 		valid := requiredType2 is String ? (type(value) = requiredType2) : (value is requiredType2)
 		if (requiredType = 'boolean') {
 			valid := valid && (value == 0 || value == 1)
 		}
-		if (!valid) {
-			throw TypeError(format('invalid type {}: {}', type(value), Util.toString(value)))
-		}
-		return value
+		return valid
 	}
 
 	; Adds debug logging to a given function with a given name.

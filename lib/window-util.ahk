@@ -3,7 +3,9 @@
 class WindowUtil {
 	static moveWindowToPos(windowId, pos, errorHandler := false) {
 		try {
-			winRestore(windowId)
+			if (winGetMinMax(windowId) > 0) {
+				winRestore(windowId)
+			}
 			return winMove(pos.x, pos.y, pos.w, pos.h, windowId)
 		} catch Error as e {
 			if (errorHandler) {

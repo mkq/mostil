@@ -117,7 +117,7 @@ class PlaceWindowCommand extends Command {
 		this.selectedTile := Util.checkType(Tile, selectedTile)
 		this.windowSpec := {
 			name: Util.checkType(String, name),
-			criteria: Util.checkType(String, criteria),
+			criteria: criteria == false ? false : Util.checkType(String, criteria),
 			launchCommand: Util.checkType(String, launchCmdStr),
 		}
 		this.defaultPreviewIcon := Util.checkType(Icon, defaultPreviewIcon)

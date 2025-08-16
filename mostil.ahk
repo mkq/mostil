@@ -58,6 +58,15 @@ class Mostil {
 	}
 
 	submit() {
+		this.closeOnFocusLostAllowed := false
+		try {
+			this.submit_()
+		} finally {
+			this.closeOnFocusLostAllowed := true
+		}
+	}
+
+	submit_() {
 		Util.printDebug("submit")
 		if (!this.submittable) {
 			return
@@ -69,13 +78,13 @@ class Mostil {
 			cpr.command.submit(this.screensManager, msg => this.handleError_(msg))
 		}
 
-		this.screensManager.hide()
-
 		input := this.screensManager.screenWithInput.input
 		cmdStr := this.normalizeCommandString(input.text)
 		this.defaultInputs := Util.moveToOrInsertAt0(this.defaultInputs, cmdStr)
 		input.delete()
 		input.add(this.defaultInputs)
+
+		this.screensManager.hide()
 	}
 
 	cancel(reasonMessage) {
@@ -90,17 +99,17 @@ class Mostil {
 	}
 
 	onValueChange() {
-		cmdStr := this.screensManager.screenWithInput.input.text
-		Util.printDebug('__________ onValueChange: "{}" __________', cmdStr)
-		global closeOnFocusLostAllowed := false
+		this.closeOnFocusLostAllowed := false
 		try {
-			this.onValueChange_(cmdStr)
+			this.onValueChange_()
 		} finally {
 			closeOnFocusLostAllowed := true
 		}
 	}
 
-	onValueChange_(cmdStr) {
+	onValueChange_() {
+		cmdStr := this.screensManager.screenWithInput.input.text
+		Util.printDebug('__________ onValueChange_: "{}" __________', cmdStr)
 		newCPRs := this.parseCommands(cmdStr)
 		diffIndex := Util.findDiffIndex(this.commandParseResults, newCPRs, (a, b) => a.input == b.input)
 		Util.printDebug('diffIndex == {}', diffIndex)
@@ -129,7 +138,7 @@ class Mostil {
 
 	parseCommands(cmdStr) {
 		Util.checkType(String, cmdStr)
-		global submittable := true
+		this.submittable := true
 		this.setStatusBarText_('')
 		cprs := []
 		i := 1, len := strlen(cmdStr)
@@ -145,7 +154,7 @@ class Mostil {
 				}
 			}
 			if (prevI == i) {
-				global submittable := false
+				this.submittable := false
 				msg := format("Invalid or incomplete input starting at index {}: {}", prevI - 1, substr(cmdStr, i))
 				Util.printDebug(msg)
 				this.handleError_(msg)

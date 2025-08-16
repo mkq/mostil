@@ -30,7 +30,8 @@ class Mostil {
 	; Starts the app and returns a function which shows the GUI, intended to be called by a hotkey.
 	; Example: hotkey("!f5", Mostil.start({ … }))
 	static start(config) {
-		return Mostil(config).showFunc
+		app := Mostil(config)
+		return (*) => app.show()
 	}
 
 	; private constructor
@@ -47,25 +48,17 @@ class Mostil {
 
 		this.commandParseResults := []
 		this.submittable := true
-		if (c.closeOnFocusLost) {
-			onMessage(0x6, (wp, lp, msg, windowId) =>
-				; 0x6: WM_ACTIVATE
-				; wp: 0 = deactivated, 1 = activated, 2 = activated by mouse
-				this.closeOnFocusLostAllowed && !wp && this.screensManager.screenWithInput.gui.gui.hwnd == windowId
-					? this.cancel('focus lost') : 1)
-		}
-		this.showFunc := (*) => this.screensManager.show(this, this.handleError_)
+		; 0x6: WM_ACTIVATE; wp: 0 = deactivated, 1 = activated, 2 = activated by mouse
+		onMessage(0x6, (wp, lp, msg, windowId) => this.handleWmActivateMessage(wp, windowId, c.closeOnFocusLost))
+	}
+
+	show() {
+		this.doWithCloseOnFocusLostDisallowed(() => this.screensManager.show(this, this.handleError_))
 	}
 
 	submit() {
-		this.closeOnFocusLostAllowed := false
-		try {
-			this.submit_()
-		} finally {
-			this.closeOnFocusLostAllowed := true
-		}
+		this.doWithCloseOnFocusLostDisallowed(() => this.submit_())
 	}
-
 	submit_() {
 		Util.printDebug("submit")
 		if (!this.submittable) {
@@ -98,12 +91,41 @@ class Mostil {
 		this.screensManager.hide()
 	}
 
+	handleWmActivateMessage(activated, windowId, closeOnFocusLost) {
+		Util.printDebug('handleWmActivateMessage({}, {}, {})', activated, windowId, closeOnFocusLost)
+		inputGui := this.screensManager.screenWithInput.gui.gui
+		if (!inputGui) {
+			return 1
+		}
+
+		; If any of our windows is activated, activate the one with input instead.
+		if (activated && this.screensManager.containsWindowId(windowId) && windowId != inputGui.hwnd) {
+			Util.printDebug('switching focus from {} to {}', windowId, inputGui.hwnd)
+			winActivate(inputGui)
+			return 0
+		}
+
+		if (closeOnFocusLost) {
+			activeWindowId := winExist('A')
+			isOtherWindow := !this.screensManager.containsWindowId(activeWindowId)
+			Util.printDebug('checking focus lost: allowed: {}, deactivated: {}, activeWindowId: {}, isOtherWindow: {}',
+				this.closeOnFocusLostAllowed, !activated, activeWindowId, isOtherWindow)
+			if (this.closeOnFocusLostAllowed && !activated && isOtherWindow) {
+				this.cancel('focus lost')
+				return 0
+			}
+		}
+
+		Util.printDebug('handleWmActivateMessage: not handled')
+		return 1
+	}
+
 	onValueChange() {
 		this.closeOnFocusLostAllowed := false
 		try {
 			this.onValueChange_()
 		} finally {
-			closeOnFocusLostAllowed := true
+			this.closeOnFocusLostAllowed := true
 		}
 	}
 
@@ -178,4 +200,15 @@ class Mostil {
 	setStatusBarText_(text) {
 		this.screensManager.screenWithInput.gui.statusBar.setText(text)
 	}
+
+	doWithCloseOnFocusLostDisallowed(f) {
+		oldValue := this.closeOnFocusLostAllowed
+		this.closeOnFocusLostAllowed := false
+		try {
+			f()
+		} finally {
+			this.closeOnFocusLostAllowed := oldValue
+		}
+	}
+
 }

@@ -4,9 +4,8 @@
 #include %A_SCRIPTDIR%/lib/tile.ahk
 
 class ScreenGui {
-	static BLANK_ICON {
-		get => Icon.blank()
-	}
+	static BLANK_ICON_ := Icon.blank()
+	static DUMMY_TILE_WINDOW_ := Tile.Window(0, ScreenGui.BLANK_ICON_, '')
 
 	__new(scr, pos, config, withInput, targetSplitPosition) {
 		Util.printDebug("init GUI for screen {} (with{} input)", scr.toString(), withInput ? '' : 'out')
@@ -44,7 +43,7 @@ class ScreenGui {
 			this.targetSplitPosition.maxSplitPercentage,
 			this.targetSplitPosition.stepPercentage)
 
-		this.tiles := Util.arrayMap(this.screen.tiles, (ti, t) => this.initTileGui_(t, ti, g, this.splitPosition))
+		this.tiles := Util.arrayMap(this.screen.tiles, (ti, t) => this.initTileGui_(t, ti, g, this.splitPosition, errorHandler))
 		this.setGroupBoxSizes_()
 		this.moveTexts_(errorHandler)
 
@@ -65,45 +64,54 @@ class ScreenGui {
 			this.statusBar := g.addStatusBar()
 		}
 
+		for ti, t in this.screen.tiles {
+			this.windowsChanged(ti, t.windows.length > 0 ? t.windows : [ScreenGui.DUMMY_TILE_WINDOW_], errorHandler)
+		}
 		g.onEvent("Close", (*) => app.cancel('window closed'))
 		g.onEvent("Escape", (*) => app.cancel('escape'))
 	}
 
 	; the per-Tile GUI elements
-	initTileGui_(t, tileIndex, g, splitPos) {
+	initTileGui_(t, tileIndex, g, splitPos, errorHandler) {
 		gb := g.addGroupBox(, t.name)
 		pos := this.splitPosition.getChildPositions()[tileIndex]
 		Util.printDebugF('GroupBox[{}] position: {}', () => [tileIndex, pos])
 		controlMove(pos.x, pos.y, pos.w, pos.h, gb)
-		pics := []
-		pics.length := this.config.maxIconCount
-		; reverse order in case of overlapping icons ([1] hides [2], etc.)
-		for ii in Util.seq(this.config.maxIconCount, 1) {
-			pictureOpts := ScreenGui.iconPos_(gb, ii, this.config).toGuiOption()
-			pic := g.addPicture(pictureOpts, A_AHKPATH)
-			pics[ii] := pic
-			ScreenGui.BLANK_ICON.updatePicture(pic)
-			ii2 := ii
-			Util.printDebugF('[{}] Picture[{}] options: {}', () => [ii2, pics.length, pictureOpts])
-		}
 		text := g.addText('w10', '')
 		text.setFont('s12')
 
 		return {
 			groupBox: gb,
-			pictures: pics,
+			pictures: [],
 			text: text,
 		}
 	}
 
 	windowsChanged(tileIndex, windows, errorHandler) {
-		t := this.tiles[tileIndex]
-		t.text.text := windows.length > 0 ? windows[1].text : ''
-		this.moveTexts_(errorHandler)
-		for i, pic in t.pictures {
-			ico := i > windows.length ? ScreenGui.BLANK_ICON : windows[i].icon
+		tg := this.tiles[tileIndex]
+
+		; update existing pictures
+		for i, pic in tg.pictures {
+			ico := i > windows.length ? ScreenGui.BLANK_ICON_ : windows[i].icon
 			ico.updatePicture(pic)
 		}
+
+		; add pictures
+		requiredPictureCount := min(windows.length, this.config.maxIconCount)
+		if (tg.pictures.length < requiredPictureCount) {
+			for i in Util.seq(tg.pictures.length + 1, requiredPictureCount) {
+				pictureOpts := ScreenGui.iconPos_(tg.groupBox, i, this.config).toGuiOption()
+				pic := this.gui.addPicture(pictureOpts, A_AHKPATH)
+				windows[i].icon.updatePicture(pic)
+				tg.pictures.push(pic)
+				i2 := i ; copy for closure bug
+				Util.printDebugF('[{}] Picture[{}] options: {}', () => [i2, tg.pictures.length, pictureOpts])
+				winMoveTop(pic)
+			}
+		}
+
+		tg.text.text := windows.length > 0 ? windows[1].text : ''
+		this.moveTexts_(errorHandler)
 	}
 
 	moveSplit(errorHandler, tileIndex) {
@@ -188,8 +196,11 @@ class ScreenGui {
 
 	moveTexts_(errorHandler) {
 		for ti, tg in this.tiles {
-			gbPos := Position.ofGuiControl(tg.groupBox)
+			if (tg.pictures.length == 0) {
+				continue
+			}
 			picPos := Position.ofGuiControl(tg.pictures[1])
+			gbPos := Position.ofGuiControl(tg.groupBox)
 			textPos := Position.ofGuiControl(tg.text)
 			newTextPos := Position.ofFloats(picPos.x, picPos.y + picPos.h + textPos.h / 2, gbPos.w, textPos.h)
 			Util.printDebugF('moveTexts_: {} → {}', () => [textPos, newTextPos])

@@ -124,10 +124,11 @@ class ScreenGui {
 	updateTiles_(errorHandler) {
 		this.setGroupBoxSizes_()
 		for i, gt in this.tiles {
+			gb := gt.groupBox
 			for j, pic in gt.pictures {
-				WindowUtil.moveWindowToPos(pic, ScreenGui.iconPos_(gt.groupBox, j, this.config), errorHandler)
-				gt.groupBox.redraw()
+				WindowUtil.moveWindowToPos(pic, ScreenGui.iconPos_(gb, j, this.config), errorHandler)
 			}
+			gb.redraw()
 		}
 	}
 

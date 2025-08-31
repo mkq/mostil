@@ -41,42 +41,42 @@ class Tile {
 		return Util.arrayIndexOfWhere(this.windows, x => x.id == windowId)
 	}
 
-	addWindow(w) {
+	addWindow(w, errorHandler) {
 		Util.checkType(Tile.Window, w)
 		; adding an already owned window should move it to the end, so remove and add
-		removeUndo := this.removeWindow(w)
+		removeUndo := this.removeWindow(w, errorHandler)
 		this.windows.insertAt(1, w)
 		undo() {
 			if (this.windows.length > 0) {
 				this.windows.removeAt(1)
-				this.windowsChanged_()
+				this.windowsChanged_(errorHandler)
 			}
 			removeUndo()
 		}
-		this.windowsChanged_()
+		this.windowsChanged_(errorHandler)
 		return (*) => undo()
 	}
 
-	removeWindow(w) {
+	removeWindow(w, errorHandler) {
 		Util.checkType(Tile.Window, w)
 		i := Util.arrayIndexOfWhere(this.windows, x => x.equals(w))
 		if (i <= 0) {
 			return (*) => {}
 		}
 		window := this.windows.removeAt(i)
-		this.windowsChanged_()
+		this.windowsChanged_(errorHandler)
 		undo() {
 			this.windows.insertAt(min(this.windows.length, i), window)
-			this.windowsChanged_()
+			this.windowsChanged_(errorHandler)
 		}
 		return (*) => undo()
 	}
 
-	removeNonExistingWindows() {
-		this.removeWindowsWhere_(w => !winExist(w.id))
+	removeNonExistingWindows(errorHandler) {
+		this.removeWindowsWhere_(w => !winExist(w.id), errorHandler)
 	}
 
-	removeMovedWindows(thisPosition) {
+	removeMovedWindows(thisPosition, errorHandler) {
 		approxEq(a, b) {
 			return abs(a - b) <= this.matchWindowPositionTolerance
 		}
@@ -91,18 +91,18 @@ class Tile {
 			}
 			return matches
 		}
-		this.removeWindowsWhere_(w => !matchesPos(w.id))
+		this.removeWindowsWhere_(w => !matchesPos(w.id), errorHandler)
 	}
 
-	removeWindowsWhere_(predicate) {
+	removeWindowsWhere_(predicate, errorHandler) {
 		oldCount := this.windows.length
 		this.windows := Util.arrayRemoveWhere(this.windows, predicate)
 		if (this.windows.length != oldCount) {
-			this.windowsChanged_()
+			this.windowsChanged_(errorHandler)
 		}
 	}
 
-	replaceWindow(oldTw, newTw) {
+	replaceWindow(oldTw, newTw, errorHandler) {
 		found := false
 		for i, tw in this.windows {
 			if (tw.equals(oldTw)) {
@@ -111,12 +111,12 @@ class Tile {
 			}
 		}
 		if (found) {
-			this.windowsChanged_()
+			this.windowsChanged_(errorHandler)
 		}
 	}
 
-	windowsChanged_() {
-		this.screen.windowsChanged(this.index, this.windows)
+	windowsChanged_(errorHandler) {
+		this.screen.windowsChanged(this.index, this.windows, errorHandler)
 	}
 
 	moveWindowId(windowId, errorHandler) {

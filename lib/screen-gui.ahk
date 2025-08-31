@@ -46,6 +46,7 @@ class ScreenGui {
 
 		this.tiles := Util.arrayMap(this.screen.tiles, (ti, t) => this.initTileGui_(t, ti, g, this.splitPosition))
 		this.setGroupBoxSizes_()
+		this.moveTexts_(errorHandler)
 
 		this.statusBar := false
 		if (this.hasInput) {
@@ -85,8 +86,9 @@ class ScreenGui {
 			ii2 := ii
 			Util.printDebugF('[{}] Picture[{}] options: {}', () => [ii2, pics.length, pictureOpts])
 		}
-		text := g.addText('w' pos.w, '')
+		text := g.addText('w10', '')
 		text.setFont('s12')
+
 		return {
 			groupBox: gb,
 			pictures: pics,
@@ -94,10 +96,11 @@ class ScreenGui {
 		}
 	}
 
-	windowsChanged(tileIndex, windows) {
-		this.tiles[tileIndex].text.text := windows.length > 0 ? windows[1].text : ''
-		pictures := this.tiles[tileIndex].pictures
-		for i, pic in pictures {
+	windowsChanged(tileIndex, windows, errorHandler) {
+		t := this.tiles[tileIndex]
+		t.text.text := windows.length > 0 ? windows[1].text : ''
+		this.moveTexts_(errorHandler)
+		for i, pic in t.pictures {
 			ico := i > windows.length ? ScreenGui.BLANK_ICON : windows[i].icon
 			ico.updatePicture(pic)
 		}
@@ -130,6 +133,7 @@ class ScreenGui {
 			}
 			gb.redraw()
 		}
+		this.moveTexts_(errorHandler)
 	}
 
 	updateWindowPositions(errorHandler) {
@@ -170,7 +174,7 @@ class ScreenGui {
 			; └───────┘  └────────┴─────────┘
 			; ┌─[v2]──┐
 			; └───────┘
-			; Therefor, for a consistent look, shrink them a bit in horizontal mode:
+			; Therefore, for a consistent look, shrink them a bit in horizontal mode:
 			if (this.splitPosition.horizontal) {
 				tPos.w -= 4
 				if (ti == 2) {
@@ -179,6 +183,17 @@ class ScreenGui {
 			}
 
 			controlMove(tPos.x, tPos.y, tPos.w, tPos.h, this.tiles[ti].groupBox)
+		}
+	}
+
+	moveTexts_(errorHandler) {
+		for ti, tg in this.tiles {
+			gbPos := Position.ofGuiControl(tg.groupBox)
+			picPos := Position.ofGuiControl(tg.pictures[1])
+			textPos := Position.ofGuiControl(tg.text)
+			newTextPos := Position.ofFloats(picPos.x, picPos.y + picPos.h + textPos.h / 2, gbPos.w, textPos.h)
+			Util.printDebugF('moveTexts_: {} → {}', () => [textPos, newTextPos])
+			WindowUtil.moveWindowToPos(tg.text, newTextPos, errorHandler)
 		}
 	}
 }

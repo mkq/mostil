@@ -32,8 +32,8 @@ class Screen {
 		; which no longer exist or have been moved.
 		tilePositions := this.targetSplitPosition.getChildPositions()
 		for i, t in this.tiles {
-			t.removeNonExistingWindows()
-			t.removeMovedWindows(tilePositions[i])
+			t.removeNonExistingWindows(errorHandler)
+			t.removeMovedWindows(tilePositions[i], errorHandler)
 		}
 
 		this.gui.show(app, errorHandler)
@@ -43,8 +43,8 @@ class Screen {
 		this.gui.hide()
 	}
 
-	windowsChanged(tileIndex, windows) {
-		this.gui.windowsChanged(tileIndex, windows)
+	windowsChanged(tileIndex, windows, errorHandler) {
+		this.gui.windowsChanged(tileIndex, windows, errorHandler)
 	}
 
 	; Moves the split "towards" a tile given by index or resets it to the default position.

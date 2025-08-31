@@ -155,7 +155,7 @@ class PlaceWindowCommand extends Command {
 		if (!this.windowId) {
 			oldTileWindow := this.tileWindow
 			this.setWindow_()
-			this.selectedTile.replaceWindow(oldTileWindow, this.tileWindow)
+			this.selectedTile.replaceWindow(oldTileWindow, this.tileWindow, errorHandler)
 		}
 		this.selectedTile.moveWindowId(this.windowId, errorHandler)
 		this.windowId := 0

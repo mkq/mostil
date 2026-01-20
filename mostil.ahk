@@ -49,6 +49,7 @@ class Mostil {
 		this.commandParseResults := []
 		this.submittable := true
 		; 0x6: WM_ACTIVATE; wp: 0 = deactivated, 1 = activated, 2 = activated by mouse
+		;TODO optimize performance:
 		onMessage(0x6, (wp, lp, msg, windowId) => this.handleWmActivateMessage(wp, windowId, c.closeOnFocusLost))
 	}
 
@@ -98,18 +99,22 @@ class Mostil {
 			return 1
 		}
 
-		; If any of our windows is activated, activate the one with input instead.
-		if (activated && this.screensManager.containsWindowId(windowId) && windowId != inputGui.hwnd) {
-			Util.printDebug('switching focus from {} to {}', windowId, inputGui.hwnd)
-			winActivate(inputGui)
-			return 0
-		}
-
-		if (closeOnFocusLost) {
+		if (!closeOnFocusLost) {
+			; If any of our windows is activated, activate the one with input instead.
+			; (Cannot happen if closeOnFocusLost.)
+			if (activated && this.screensManager.containsWindowId(windowId) && windowId != inputGui.hwnd) {
+				; Util.printDebug('switching focus from {} to {}', windowId, inputGui.hwnd)
+				; winActivate(inputGui)
+				; ↑ would work, but is somehow much slower than ScreenGui.show.
+				; Does ScreenGui.show not cause another WM_ACTIVATE message??
+				Util.printDebug('ScreenGui.show(..) to switch focus from {} to {}', windowId, inputGui.hwnd)
+				this.screensManager.screenWithInput.gui.show(this, msg => this.handleError_(msg))
+				return 0
+			}
+		} else {
 			activeWindowId := winExist('A')
 			isOtherWindow := !this.screensManager.containsWindowId(activeWindowId)
-			Util.printDebug('checking focus lost: allowed: {}, deactivated: {}, activeWindowId: {}, isOtherWindow: {}',
-				this.closeOnFocusLostAllowed, !activated, activeWindowId, isOtherWindow)
+			Util.printDebug('checking focus lost: allowed: {}, deactivated: {}, activeWindowId: {}, isOtherWindow: {}', this.closeOnFocusLostAllowed, !activated, activeWindowId, isOtherWindow)
 			if (this.closeOnFocusLostAllowed && !activated && isOtherWindow) {
 				this.cancel('focus lost')
 				return 0
@@ -169,8 +174,7 @@ class Mostil {
 			prevI := i
 			for (p in this.commandParsers) {
 				if (p.parse(cmdStr, &i, cprs)) { ; p parsed something at i; continue with 1st parser at (already incremented) index
-					Util.printDebug("parsed `"{}`" part (next index {} → {}) into {} commands. ⇒ All commands:",
-						cmdStr, prevI, i, cprs.length - prevLength)
+					Util.printDebug("parsed `"{}`" part (next index {} → {}) into {} commands. ⇒ All commands:", cmdStr, prevI, i, cprs.length - prevLength)
 					Util.arrayMap(cprs, cpr => Util.printDebug("- {}", cpr))
 					break
 				}

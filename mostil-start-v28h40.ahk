@@ -17,7 +17,7 @@ hotkey("!AppsKey", Mostil.start({
 		iconDist: "8%",
 	},
 	screens: {
-		L: { x: -2560, y: -400, w: 2560, h: 2880, split: "v30%", grid: "10%", snap: ["20%", "80%"], inputs: ["h", "n"], ui: { scale: "30%", x: 300, y: 350 } },
+		L: { x: -2560, y: -400, w: 2560, h: 2880, split: "v37%", grid: "8%", snap: ["23%", "77%"], inputs: ["h", "n"], ui: { scale: "30%", x: 300, y: 350 } },
 		R: { x: 0, y: 0, w: 5120, h: 2088, split: "h", grid: "6%", snap: ["25%", "75%"], inputs: ["r", "t"], ui: { scale: "30%", x: 1080, y: 450, input: true } },
 	},
 	commands: [ ;

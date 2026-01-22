@@ -54,7 +54,9 @@ class ScreenGui {
 			this.input := g.addComboBox(format('w{} x{} y{} vCmd',
 				inputW,
 				(windowClientPos.w - inputW) / 2,
-				windowClientPos.h / 2 - 20))
+				; y in horizontal mode: near top, where it probably does not hide the title groupBox nor the preview icons;
+				; y in vertical mode: centered (risk of hiding the split is almost everywhere):
+				this.targetSplitPosition.horizontal ? min(35, windowClientPos.h - 20) : windowClientPos.h / 2 - 20))
 			this.input.focus()
 			this.input.onEvent("Change", (*) => app.onValueChange())
 			; invisible OK button to handle enter in the combobox:

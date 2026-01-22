@@ -21,6 +21,7 @@ class Icon {
 	}
 
 	static fromFile(filename, index := 1, fallbackIcon := false) {
+		;Util.printDebug('Icon.fromFile("{}", {}, ..)', filename, index)
 		return Icon(filename, index, 0, fallbackIcon)
 	}
 

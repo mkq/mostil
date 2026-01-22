@@ -4,12 +4,8 @@
 #include %A_SCRIPTDIR%/lib/icon.ahk
 
 class PlaceWindowCommandParser extends CommandParser {
-	static DEFAULT_ICON {
-		get => Icon.fromFile('shell32.dll', 184, Icon.blank())
-	}
-	static FILE_NOT_FOUND_ICON {
-		get => Icon.fromFile('shell32.dll', 240, Icon.blank())
-	}
+	static DEFAULT_ICON := Icon.fromFile('shell32.dll', 98, Icon.blank())
+	static FILE_NOT_FOUND_ICON := Icon.fromFile('shell32.dll', 225, Icon.blank())
 
 	static parseConfig(config, screensManager) {
 		cmd := Util.getProp(config, "run", "")

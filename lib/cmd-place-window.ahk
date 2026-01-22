@@ -37,8 +37,8 @@ class PlaceWindowCommandParser extends CommandParser {
 	}
 
 	parse(cmdStr, &i, commandParseResults) {
-		; Do not accept window input if such a window does not exist & we cannot launch it:
-		if (!this.launchCmdStr && !PlaceWindowCommandParser.getWindowId_(this.criteria, this.screensManager)) {
+		; Do not accept window input (except active window, i.e. without criteria) if such a window does not exist & we cannot launch it:
+		if (this.criteria && !this.launchCmdStr && !PlaceWindowCommandParser.getWindowId_(this.criteria, this.screensManager)) {
 			return super.parse(cmdStr, &i, commandParseResults)
 		}
 
@@ -62,8 +62,8 @@ class PlaceWindowCommandParser extends CommandParser {
 			windowId := winExist(criteria)
 			Util.printDebug('window for {}: {}', criteria, windowId)
 			return windowId
-		} else { ; MRU mode
-			return WindowUtil.getActiveOtherWindow(screensMgr)
+		} else { ; currently active window mode
+			return screensMgr.prevActiveWindowId
 		}
 	}
 }
@@ -93,7 +93,9 @@ class FocusWindowCommand extends Command {
 		windowId := PlaceWindowCommandParser.getWindowId_(this.windowSpec.criteria, this.screensManager)
 		if (!windowId) {
 			if (!this.windowSpec.launchCommand) {
-				errorHandler(format('no window matching {} found', this.windowSpec.criteria))
+				if (this.windowSpec.criteria) {
+					errorHandler(format('no window matching {} found', this.windowSpec.criteria))
+				}
 				return
 			}
 			Util.printDebug('run: {}', this.windowSpec.launchCommand)

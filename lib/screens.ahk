@@ -15,9 +15,16 @@ class ScreensManager {
 			}
 		}
 		this.screens := screens
+		this.prevActiveWindowId := 0
 	}
 
 	show(app, errorHandler) {
+		try {
+			this.prevActiveWindowId := winGetId('A')
+		} catch TargetError {
+			this.prevActiveWindowId := 0
+		}
+		Util.printDebug('prevActiveWindowId == {}', this.prevActiveWindowId)
 		this.forEachScreenInputScreenLast(s => s.show(app, errorHandler))
 	}
 
